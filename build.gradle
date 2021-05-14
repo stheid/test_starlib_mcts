@@ -13,7 +13,6 @@ repositories {
 dependencies {
     implementation 'ai.libs:jaicore-search:0.2.4'
 }
-
 compileKotlin {
     kotlinOptions.jvmTarget = '11'
 }
