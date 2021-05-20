@@ -1,5 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.4.32'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '1.4.32'
 }
 
 group = 'me.sheid'
@@ -11,7 +12,11 @@ repositories {
 }
 
 dependencies {
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.1'
+    implementation 'com.charleskorn.kaml:kaml:0.33.0'
     implementation 'ai.libs:jaicore-search:0.2.4'
+    implementation 'org.junit.jupiter:junit-jupiter:5.7.0'
+    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.28'
 }
 compileKotlin {
     kotlinOptions.jvmTarget = '11'
