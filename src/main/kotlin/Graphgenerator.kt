@@ -10,6 +10,37 @@ open class Symbol(value: String)
 data class NonTerminal(val value: String) : Symbol(value)
 data class Terminal(val value: String) : Symbol(value)
 
+
+data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>) {
+    companion object {
+        fun fromCollection(collection: List<Symbol>): Symbols {
+            return Symbols(collection,
+                collection.withIndex().filterIsInstance<IndexedValue<NonTerminal>>().map { it.index })
+        }
+    }
+
+    fun createChild(idxNonTerminal: Int, substitution: List<Symbol>): Symbols {
+        val nt = nonTerminalIndices[idxNonTerminal]
+        val str = this.symbols.toMutableList()
+        str.removeAt(nt)
+        str.addAll(nt, substitution)
+
+
+        val indices = nonTerminalIndices.take(idxNonTerminal) +
+                Symbols.fromCollection(substitution).nonTerminalIndices.map { it + nt} +
+                nonTerminalIndices.drop(idxNonTerminal + 1).map { it + }
+
+
+
+        return Symbols(str.toList(), indices)
+
+    }
+
+    val isLeaf: Boolean
+        get() = this.nonTerminalIndices.isEmpty()
+}
+
+/*
 data class Symbols(val first: LinkedElement<Symbol>, val nonTerminals: MutableSet<LinkedElement<Symbol>>) {
     companion object {
         fun fromCollection(collection: List<Symbol>): Symbols {
@@ -41,7 +72,7 @@ data class Symbols(val first: LinkedElement<Symbol>, val nonTerminals: MutableSe
     val isTerminalsOnly: Boolean
         get() = this.ntIndices.isEmpty()
 }
-
+*/
 
 // edge type
 // right hand side of a production rulec
@@ -82,7 +113,7 @@ class PCFGSuccGen(val prodRules: ProdRules) : ILazySuccessorGenerator<Symbols, R
                             }
 
                             override fun getTo(): Symbols {
-                                return node.substitute(nt, it.substitution)
+                                return node.createChild(nt, it.substitution)
                             }
 
                             override fun getArcLabel(): Rule {

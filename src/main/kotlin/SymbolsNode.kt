@@ -86,7 +86,7 @@ when in leaf-node:
 
 
 
-
+/*
 
 data class Symbols(val first: LinkedElement<Symbol>, val nonTerminals: MutableSet<LinkedElement<Symbol>>) {
     companion object {
@@ -105,7 +105,7 @@ data class Symbols(val first: LinkedElement<Symbol>, val nonTerminals: MutableSe
     }
 
 
-    fun substitute(nonTerminalRef: LinkedElement<Symbol>, substitution: Symbols): Symbols {
+    fun createChild(nonTerminalRef: LinkedElement<Symbol>, substitution: Symbols): Symbols {
         val left = nonTerminalRef.pre
         val right = nonTerminalRef.succ
         // TODO
@@ -118,4 +118,4 @@ data class Symbols(val first: LinkedElement<Symbol>, val nonTerminals: MutableSe
 
     val isTerminalsOnly: Boolean
         get() = this.ntIndices.isEmpty()
-}
+}*/
