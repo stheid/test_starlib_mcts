@@ -48,6 +48,9 @@ class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<Symbols
 
 
 data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>) {
+    val expandableNT = nonTerminalIndices.withIndex().toList().firstOrNull()
+    //val expandableNT = nonTerminalIndices.withIndex().toList().randomOrNull()
+
     companion object {
         fun fromCollection(collection: List<Symbol>): Symbols {
             return Symbols(collection,
@@ -55,52 +58,62 @@ data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>)
         }
     }
 
-    fun createChild(ntIdxIdx: Int, substitution: List<Symbol>): Symbols {
-        val ntIdx = nonTerminalIndices[ntIdxIdx]
+
+    fun createChild(substitution: List<Symbol>): Symbols {
+        require(expandableNT != null) { "cannot create childs when there are no nonterminals" }
+
         val str = let {
             val list = this.symbols.toMutableList()
-            list.removeAt(ntIdx)
-            list.addAll(ntIdx, substitution)
+            list.removeAt(expandableNT.value)
+            list.addAll(expandableNT.value, substitution)
             return@let list
         }.toList()
 
-        val indices = nonTerminalIndices.take(ntIdxIdx) +
+        val indices = nonTerminalIndices.take(expandableNT.index) +
                 // shift indices of the substitution by the offset of the index at which they are added
-                fromCollection(substitution).nonTerminalIndices.map { it + ntIdx } +
+                fromCollection(substitution).nonTerminalIndices.map { it + expandableNT.value } +
                 // shift elements after substitution by the size of the substitution
-                nonTerminalIndices.drop(ntIdxIdx + 1).map { it + substitution.size - 1 }
+                nonTerminalIndices.drop(expandableNT.index + 1).map { it + substitution.size - 1 }
 
         return Symbols(str, indices)
     }
 
     val isTerminalsOnly: Boolean
         get() = this.nonTerminalIndices.isEmpty()
+
+    override fun toString(): String {
+        if (isTerminalsOnly)
+            return symbols.joinToString(separator = "") {
+                when (it) {
+                    is Symbol.NonTerminal -> it.value
+                    is Symbol.Terminal -> it.value
+                }
+            }
+        return super.toString()
+    }
 }
 
 class PCFGSuccGen(private val prodRules: ProdRules) : ILazySuccessorGenerator<Symbols, Rule> {
     override fun getIterativeGenerator(node: Symbols): Iterator<INewNodeDescription<Symbols, Rule>> {
-        return node.nonTerminalIndices
-            .withIndex().toList()
-            .firstOrNull()
-            ?.let { nt ->
-                prodRules[node.symbols[nt.value] as Symbol.NonTerminal]!!
-                    .asSequence()
-                    .map {
-                        object : INewNodeDescription<Symbols, Rule> {
-                            override fun getFrom(): Symbols {
-                                return node
-                            }
+        return node.expandableNT?.let { nt ->
+            prodRules[node.symbols[nt.value] as Symbol.NonTerminal]!!
+                .asSequence()
+                .map {
+                    object : INewNodeDescription<Symbols, Rule> {
+                        override fun getFrom(): Symbols {
+                            return node
+                        }
 
-                            override fun getTo(): Symbols {
-                                return node.createChild(nt.index, it.substitution)
-                            }
+                        override fun getTo(): Symbols {
+                            return node.createChild(it.substitution)
+                        }
 
-                            override fun getArcLabel(): Rule {
-                                return it
-                            }
+                        override fun getArcLabel(): Rule {
+                            return it
                         }
                     }
-            }?.iterator() ?: emptyList<INewNodeDescription<Symbols, Rule>>().iterator()
+                }
+        }?.iterator() ?: emptyList<INewNodeDescription<Symbols, Rule>>().iterator()
     }
 
     override fun generateSuccessors(node: Symbols): List<INewNodeDescription<Symbols, Rule>> {

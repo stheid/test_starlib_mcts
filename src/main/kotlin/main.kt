@@ -6,8 +6,11 @@ import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
 import org.api4.java.ai.graphsearch.problem.pathsearch.pathevaluation.IPathEvaluator
 import java.io.File
+import kotlin.math.absoluteValue
 
 fun main() {
+
+
     /* create path search problem */
     val rawInput = PCFGSearchInput(
         Yaml(configuration = YamlConfiguration(polymorphismStyle = PolymorphismStyle.Property)).decodeFromString(
@@ -16,13 +19,13 @@ fun main() {
     )
     /* create a version with costs */
     val input = GraphSearchWithPathEvaluationsInput(rawInput, IPathEvaluator {
-        it.head.symbols.size * 1.0
+        (10 - it.head.symbols.size * 1.0).absoluteValue
     })
 
     /* create MCTS algorithm */
     val factory = MCTSPathSearchFactory<Symbols, Rule>()
     val uct = UCTFactory<Symbols, Rule>()
-    uct.withMaxIterations(1000)
+    uct.withMaxIterations(10)
     val mcts = factory.withMCTSFactory(uct).withProblem(input).algorithm
     /* solve problem */
     val solution = mcts.call()
