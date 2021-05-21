@@ -58,7 +58,6 @@ data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>)
         }
     }
 
-
     fun createChild(substitution: List<Symbol>): Symbols {
         require(expandableNT != null) { "cannot create childs when there are no nonterminals" }
 
@@ -89,7 +88,7 @@ data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>)
                     is Symbol.Terminal -> it.value
                 }
             }
-        return super.toString()
+        return symbols.toString()
     }
 }
 

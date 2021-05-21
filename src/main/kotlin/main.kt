@@ -9,8 +9,6 @@ import java.io.File
 import kotlin.math.absoluteValue
 
 fun main() {
-
-
     /* create path search problem */
     val rawInput = PCFGSearchInput(
         Yaml(configuration = YamlConfiguration(polymorphismStyle = PolymorphismStyle.Property)).decodeFromString(
