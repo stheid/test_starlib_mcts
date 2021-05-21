@@ -2,8 +2,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.api4.java.ai.graphsearch.problem.IPathSearchInput
 import org.api4.java.ai.graphsearch.problem.implicit.graphgenerator.IPathGoalTester
-import org.api4.java.ai.graphsearch.problem.pathsearch.pathevaluation.IPathEvaluator
-import org.api4.java.datastructure.graph.ILabeledPath
 import org.api4.java.datastructure.graph.implicit.*
 
 @Serializable
@@ -37,7 +35,7 @@ data class Rule(val substitution: List<Symbol>, val weight: Double)
 
 
 class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<Symbols, Rule> {
-    val successorGenerator = PCFGSuccGen(grammar.prodRules)
+    private val successorGenerator = PCFGSuccGen(grammar.prodRules)
 
     override fun getRootGenerator(): ISingleRootGenerator<Symbols> {
         return ISingleRootGenerator<Symbols> { Symbols.fromCollection(listOf(grammar.startSymbol)) }
@@ -57,52 +55,52 @@ data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>)
         }
     }
 
-    fun createChild(idxNonTerminal: Int, substitution: List<Symbol>): Symbols {
-        val indexOfNT = nonTerminalIndices[idxNonTerminal]
-        val str = this.symbols.toMutableList()
-        str.removeAt(indexOfNT)
-        str.addAll(indexOfNT, substitution)
+    fun createChild(ntIdxIdx: Int, substitution: List<Symbol>): Symbols {
+        val ntIdx = nonTerminalIndices[ntIdxIdx]
+        val str = let {
+            val list = this.symbols.toMutableList()
+            list.removeAt(ntIdx)
+            list.addAll(ntIdx, substitution)
+            return@let list
+        }.toList()
 
-        val indices = nonTerminalIndices.take(indexOfNT) +
+        val indices = nonTerminalIndices.take(ntIdxIdx) +
                 // shift indices of the substitution by the offset of the index at which they are added
-                fromCollection(substitution).nonTerminalIndices.map { it + indexOfNT } +
+                fromCollection(substitution).nonTerminalIndices.map { it + ntIdx } +
                 // shift elements after substitution by the size of the substitution
-                nonTerminalIndices.drop(indexOfNT + 1).map { it + substitution.size - 1 }
+                nonTerminalIndices.drop(ntIdxIdx + 1).map { it + substitution.size - 1 }
 
-        return Symbols(str.toList(), indices)
+        return Symbols(str, indices)
     }
 
     val isTerminalsOnly: Boolean
         get() = this.nonTerminalIndices.isEmpty()
 }
 
-class PCFGSuccGen(val prodRules: ProdRules) : ILazySuccessorGenerator<Symbols, Rule> {
+class PCFGSuccGen(private val prodRules: ProdRules) : ILazySuccessorGenerator<Symbols, Rule> {
     override fun getIterativeGenerator(node: Symbols): Iterator<INewNodeDescription<Symbols, Rule>> {
-        if (node.isTerminalsOnly)
-            return emptySequence<INewNodeDescription<Symbols, Rule>>().iterator()
-        else
-            return node.nonTerminalIndices.take(1)
-                .withIndex()
-                .asSequence()
-                .flatMap { nt ->
-                    prodRules.get(node.symbols[nt.value] as Symbol.NonTerminal)!!
-                        .asSequence()
-                        .map {
-                            object : INewNodeDescription<Symbols, Rule> {
-                                override fun getFrom(): Symbols {
-                                    return node
-                                }
+        return node.nonTerminalIndices
+            .withIndex().toList()
+            .firstOrNull()
+            ?.let { nt ->
+                prodRules[node.symbols[nt.value] as Symbol.NonTerminal]!!
+                    .asSequence()
+                    .map {
+                        object : INewNodeDescription<Symbols, Rule> {
+                            override fun getFrom(): Symbols {
+                                return node
+                            }
 
-                                override fun getTo(): Symbols {
-                                    return node.createChild(nt.index, it.substitution)
-                                }
+                            override fun getTo(): Symbols {
+                                return node.createChild(nt.index, it.substitution)
+                            }
 
-                                override fun getArcLabel(): Rule {
-                                    return it
-                                }
+                            override fun getArcLabel(): Rule {
+                                return it
                             }
                         }
-                }.iterator()
+                    }
+            }?.iterator() ?: emptyList<INewNodeDescription<Symbols, Rule>>().iterator()
     }
 
     override fun generateSuccessors(node: Symbols): List<INewNodeDescription<Symbols, Rule>> {
@@ -111,17 +109,13 @@ class PCFGSuccGen(val prodRules: ProdRules) : ILazySuccessorGenerator<Symbols, R
 }
 
 
-class PCFGSearchInput(val grammar: Grammar) : IPathSearchInput<Symbols, Rule> {
+class PCFGSearchInput(private val grammar: Grammar) : IPathSearchInput<Symbols, Rule> {
     override fun getGraphGenerator(): IGraphGenerator<Symbols, Rule> {
         return PCFGGraphGenerator(grammar)
     }
 
     override fun getGoalTester(): IPathGoalTester<Symbols, Rule> {
-        return object : IPathGoalTester<Symbols, Rule> {
-            override fun isGoal(path: ILabeledPath<Symbols, Rule>): Boolean {
-                return path.head.isTerminalsOnly
-            }
-        }
+        return IPathGoalTester<Symbols, Rule> { path -> path.head.isTerminalsOnly }
     }
 }
 
