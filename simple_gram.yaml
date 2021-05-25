@@ -1,0 +1,49 @@
+prodRules_:
+  S:
+    - substitution:
+        - type: nonterminal
+          value: A
+      weight: 1
+    - substitution:
+        - type: nonterminal
+          value: B
+      weight: 1
+    - substitution:
+        - type: nonterminal
+          value: C
+      weight: 1
+  A:
+    - substitution:
+        - type: nonterminal
+          value: A
+        - type: terminal
+          value: a
+      weight: 1
+    - substitution:
+        - type: terminal
+          value: a
+      weight: 1
+  B:
+    - substitution:
+        - type: nonterminal
+          value: B
+        - type: nonterminal
+          value: B
+      weight: 1
+    - substitution:
+        - type: terminal
+          value: b
+      weight: 1
+  C:
+    - substitution:
+        - type: terminal
+          value: c
+        - type: nonterminal
+          value: C
+      weight: 1
+    - substitution:
+        - type: terminal
+          value: c
+      weight: 1
+startSymbol:
+  value: S

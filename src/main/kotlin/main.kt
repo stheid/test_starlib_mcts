@@ -12,18 +12,18 @@ fun main() {
     /* create path search problem */
     val rawInput = PCFGSearchInput(
         Yaml(configuration = YamlConfiguration(polymorphismStyle = PolymorphismStyle.Property)).decodeFromString(
-            Grammar.serializer(), File("grammar.yaml").bufferedReader().readText()
+            Grammar.serializer(), File("simple_gram2.yaml").bufferedReader().readText()
         )
     )
     /* create a version with costs */
     val input = GraphSearchWithPathEvaluationsInput(rawInput, IPathEvaluator {
-        (10 - it.head.symbols.size * 1.0).absoluteValue
+        1.0//(10 - it.head.symbols.size * 1.0).absoluteValue
     })
 
     /* create MCTS algorithm */
     val factory = MCTSPathSearchFactory<Symbols, Rule>()
     val uct = UCTFactory<Symbols, Rule>()
-    uct.withMaxIterations(10)
+    uct.withMaxIterations(100)
     val mcts = factory.withMCTSFactory(uct).withProblem(input).algorithm
     /* solve problem */
     val solution = mcts.call()
