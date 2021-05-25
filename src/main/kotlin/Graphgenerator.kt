@@ -106,10 +106,10 @@ data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>)
     }
 }
 
-class PCFGSuccGen(private val prodRules: ProdRules) : ILazySuccessorGenerator<Symbols, Rule> {
+class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbols, Rule> {
     val nodes = ConcurrentHashMap<Symbols,Boolean>()
 
-    override fun getIterativeGenerator(node: Symbols): Iterator<INewNodeDescription<Symbols, Rule>> {
+    override fun generateSuccessors(node: Symbols): List<INewNodeDescription<Symbols, Rule>> {
         return node.expandableNT?.let { nt ->
             prodRules[node.symbols[nt.value] as Symbol.NonTerminal]!!
                 .asSequence()
@@ -137,11 +137,7 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ILazySuccessorGenerator<Sy
                     }
                 }
 
-        }?.iterator() ?: emptyList<INewNodeDescription<Symbols, Rule>>().iterator()
-    }
-
-    override fun generateSuccessors(node: Symbols): List<INewNodeDescription<Symbols, Rule>> {
-        return getIterativeGenerator(node).asSequence().toList()
+        }?.toList() ?: emptyList<INewNodeDescription<Symbols, Rule>>()
     }
 }
 
