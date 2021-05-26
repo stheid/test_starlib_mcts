@@ -2,17 +2,27 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.api4.java.ai.graphsearch.problem.IPathSearchInput
 import org.api4.java.ai.graphsearch.problem.implicit.graphgenerator.IPathGoalTester
+import org.api4.java.datastructure.graph.ILabeledPath
 import org.api4.java.datastructure.graph.implicit.*
+import java.util.concurrent.ConcurrentHashMap
 
 @Serializable
 sealed class Symbol {
     @SerialName("terminal")
     @Serializable
-    data class Terminal(val value: String) : Symbol()
+    data class Terminal(val value: String) : Symbol() {
+        override fun toString(): String {
+            return "term: ${value}"
+        }
+    }
 
     @SerialName("nonterminal")
     @Serializable
-    data class NonTerminal(val value: String) : Symbol()
+    data class NonTerminal(val value: String) : Symbol() {
+        override fun toString(): String {
+            return "nt: ${value}"
+        }
+    }
 
 }
 
@@ -31,7 +41,11 @@ typealias ProdRules = Map<Symbol.NonTerminal, List<Rule>>
 // edge type
 // right hand side of a production rule
 @Serializable
-data class Rule(val substitution: List<Symbol>, val weight: Double)
+data class Rule(val substitution: List<Symbol>, val weight: Double) {
+    override fun toString(): String {
+        return " -> $substitution"
+    }
+}
 
 
 class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<Symbols, Rule> {
@@ -48,8 +62,7 @@ class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<Symbols
 
 
 data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>) {
-    val expandableNT = nonTerminalIndices.withIndex().toList().firstOrNull()
-    //val expandableNT = nonTerminalIndices.withIndex().toList().randomOrNull()
+    val expandableNT = nonTerminalIndices.withIndex().toList().randomOrNull()
 
     companion object {
         fun fromCollection(collection: List<Symbol>): Symbols {
@@ -88,35 +101,50 @@ data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>)
                     is Symbol.Terminal -> it.value
                 }
             }
-        return symbols.toString()
+        return Triple(expandableNT?.value, symbols, nonTerminalIndices).toString()
     }
 }
 
-class PCFGSuccGen(private val prodRules: ProdRules) : ILazySuccessorGenerator<Symbols, Rule> {
-    override fun getIterativeGenerator(node: Symbols): Iterator<INewNodeDescription<Symbols, Rule>> {
-        return node.expandableNT?.let { nt ->
+class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbols, Rule> {
+    val nodes = ConcurrentHashMap<Symbols, Boolean>()
+    val adiacenceList = ConcurrentHashMap<Symbols, List<INewNodeDescription<Symbols, Rule>>>()
+
+
+    override fun generateSuccessors(node: Symbols): List<INewNodeDescription<Symbols, Rule>> {
+        if (adiacenceList.containsKey(node)) {
+            // if expansion known. return childs
+            return adiacenceList.get(node)!!
+        }
+
+        // else create new childs and filter for existing ones
+        val children = node.expandableNT?.let { nt ->
             prodRules[node.symbols[nt.value] as Symbol.NonTerminal]!!
-                .asSequence()
-                .map {
+                .map { node.createChild(it.substitution) to it }
+                .filter { (child, _) ->
+                    val tmp = nodes.putIfAbsent(child, true) == null
+                    return@filter tmp
+                }
+                .map { (child, rule) ->
                     object : INewNodeDescription<Symbols, Rule> {
                         override fun getFrom(): Symbols {
                             return node
                         }
 
                         override fun getTo(): Symbols {
-                            return node.createChild(it.substitution)
+                            return child
                         }
 
                         override fun getArcLabel(): Rule {
-                            return it
+                            return rule
                         }
                     }
                 }
-        }?.iterator() ?: emptyList<INewNodeDescription<Symbols, Rule>>().iterator()
-    }
+        }?: emptyList()
 
-    override fun generateSuccessors(node: Symbols): List<INewNodeDescription<Symbols, Rule>> {
-        return getIterativeGenerator(node).asSequence().toList()
+        // todo: handle what happens if node has no children, but is not a leaf
+        // -> can happen because of filtering
+        adiacenceList.put(node, children)
+        return children
     }
 }
 

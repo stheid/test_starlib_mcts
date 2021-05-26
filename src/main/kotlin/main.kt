@@ -17,13 +17,13 @@ fun main() {
     )
     /* create a version with costs */
     val input = GraphSearchWithPathEvaluationsInput(rawInput, IPathEvaluator {
-        (10 - it.head.symbols.size * 1.0).absoluteValue
+        (30 - it.head.symbols.size * 1.0).absoluteValue
     })
 
     /* create MCTS algorithm */
     val factory = MCTSPathSearchFactory<Symbols, Rule>()
     val uct = UCTFactory<Symbols, Rule>()
-    uct.withMaxIterations(10)
+    uct.withMaxIterations(100)
     val mcts = factory.withMCTSFactory(uct).withProblem(input).algorithm
     /* solve problem */
     val solution = mcts.call()
