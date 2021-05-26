@@ -18,17 +18,13 @@ class Algorithm(maxIterations: Int = 100) {
     private var worker: Thread
 
     init {
-        /**
-         * setup mcts and stuff
-         * setup concurrent datastructures
-         * startmcts call
-         */
         val rawInput = PCFGSearchInput(
             Yaml(configuration = YamlConfiguration(polymorphismStyle = PolymorphismStyle.Property)).decodeFromString(
                 Grammar.serializer(), File("grammars/grammar.yaml").bufferedReader().readText()
             )
         )
-        /* create a version with costs */
+
+        // create a version with costs
         val input = GraphSearchWithPathEvaluationsInput(rawInput, IPathEvaluator {
             runBlocking {
                 inputChannel.send(it.head.toString().toByteArray())
@@ -36,16 +32,18 @@ class Algorithm(maxIterations: Int = 100) {
             }.sumOf { it.toInt().toDouble() }
         })
 
-        /* create MCTS algorithm */
+        // create MCTS algorithm
         val factory = MCTSPathSearchFactory<Symbols, Rule>()
         val uct = UCTFactory<Symbols, Rule>()
         uct.withMaxIterations(maxIterations)
         val mcts = factory.withMCTSFactory(uct).withProblem(input).algorithm
+
+        // start mcts call in background
         worker = thread { solution = mcts.call() }
     }
 
     fun createInput(): ByteArray {
-        //await pop input-queue
+        // await pop input-queue
         return runBlocking { inputChannel.receive() }
     }
 
@@ -56,15 +54,8 @@ class Algorithm(maxIterations: Int = 100) {
 
     fun join() {
         worker.join()
-        println(solution.head)
-    }
-}
 
-fun main() {
-    val algo = Algorithm(2)
-    algo.createInput().decodeToString()
-    algo.observe(listOf(1, 0, 0, 0).map { it.toByte() }.toByteArray())
-    algo.createInput().decodeToString()
-    algo.observe(listOf(1, 2, 3, 4).map { it.toByte() }.toByteArray())
-    algo.join()
+        println(solution.head)
+        println(solution.score)
+    }
 }
