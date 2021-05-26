@@ -1,0 +1,70 @@
+import ai.libs.jaicore.search.algorithms.mdp.mcts.uct.UCTFactory
+import ai.libs.jaicore.search.algorithms.standard.mcts.MCTSPathSearchFactory
+import ai.libs.jaicore.search.model.other.EvaluatedSearchGraphPath
+import ai.libs.jaicore.search.probleminputs.GraphSearchWithPathEvaluationsInput
+import com.charleskorn.kaml.PolymorphismStyle
+import com.charleskorn.kaml.Yaml
+import com.charleskorn.kaml.YamlConfiguration
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.runBlocking
+import org.api4.java.ai.graphsearch.problem.pathsearch.pathevaluation.IPathEvaluator
+import java.io.File
+import kotlin.concurrent.thread
+
+class Algorithm(maxIterations: Int = 100) {
+    private val inputChannel = Channel<ByteArray>()
+    private val covChannel = Channel<ByteArray>()
+    private lateinit var solution: EvaluatedSearchGraphPath<Symbols, Rule, Double>
+    private var worker: Thread
+
+    init {
+        /**
+         * setup mcts and stuff
+         * setup concurrent datastructures
+         * startmcts call
+         */
+        val rawInput = PCFGSearchInput(
+            Yaml(configuration = YamlConfiguration(polymorphismStyle = PolymorphismStyle.Property)).decodeFromString(
+                Grammar.serializer(), File("grammars/grammar.yaml").bufferedReader().readText()
+            )
+        )
+        /* create a version with costs */
+        val input = GraphSearchWithPathEvaluationsInput(rawInput, IPathEvaluator {
+            runBlocking {
+                inputChannel.send(it.head.toString().toByteArray())
+                covChannel.receive()
+            }.sumOf { it.toInt().toDouble() }
+        })
+
+        /* create MCTS algorithm */
+        val factory = MCTSPathSearchFactory<Symbols, Rule>()
+        val uct = UCTFactory<Symbols, Rule>()
+        uct.withMaxIterations(maxIterations)
+        val mcts = factory.withMCTSFactory(uct).withProblem(input).algorithm
+        worker = thread { solution = mcts.call() }
+    }
+
+    fun createInput(): ByteArray {
+        //await pop input-queue
+        return runBlocking { inputChannel.receive() }
+    }
+
+    fun observe(coverage: ByteArray) {
+        // put into cov-queue
+        runBlocking { covChannel.send(coverage) }
+    }
+
+    fun join() {
+        worker.join()
+        println(solution.head)
+    }
+}
+
+fun main() {
+    val algo = Algorithm(2)
+    algo.createInput().decodeToString()
+    algo.observe(listOf(1, 0, 0, 0).map { it.toByte() }.toByteArray())
+    algo.createInput().decodeToString()
+    algo.observe(listOf(1, 2, 3, 4).map { it.toByte() }.toByteArray())
+    algo.join()
+}

@@ -31,3 +31,4 @@ fun main() {
     println(solution.head)
     println(solution.score)
 }
+
