@@ -41,7 +41,7 @@ typealias ProdRules = Map<Symbol.NonTerminal, List<Rule>>
 // edge type
 // right hand side of a production rule
 @Serializable
-data class Rule(val substitution: List<Symbol>, val weight: Double){
+data class Rule(val substitution: List<Symbol>, val weight: Double) {
     override fun toString(): String {
         return " -> $substitution"
     }
@@ -62,7 +62,6 @@ class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<Symbols
 
 
 data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>) {
-    //val expandableNT = nonTerminalIndices.withIndex().toList().firstOrNull()
     val expandableNT = nonTerminalIndices.withIndex().toList().randomOrNull()
 
     companion object {
@@ -102,26 +101,30 @@ data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>)
                     is Symbol.Terminal -> it.value
                 }
             }
-        return Triple(expandableNT?.value,symbols, nonTerminalIndices).toString()
+        return Triple(expandableNT?.value, symbols, nonTerminalIndices).toString()
     }
 }
 
 class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbols, Rule> {
-    val nodes = ConcurrentHashMap<Symbols,Boolean>()
+    val nodes = ConcurrentHashMap<Symbols, Boolean>()
+    val adiacenceList = ConcurrentHashMap<Symbols, List<INewNodeDescription<Symbols, Rule>>>()
+
 
     override fun generateSuccessors(node: Symbols): List<INewNodeDescription<Symbols, Rule>> {
-        return node.expandableNT?.let { nt ->
+        if (adiacenceList.containsKey(node)) {
+            // if expansion known. return childs
+            return adiacenceList.get(node)!!
+        }
+
+        // else create new childs and filter for existing ones
+        val children = node.expandableNT?.let { nt ->
             prodRules[node.symbols[nt.value] as Symbol.NonTerminal]!!
-                .asSequence()
                 .map { node.createChild(it.substitution) to it }
-                .filter{(child, rule) ->
+                .filter { (child, _) ->
                     val tmp = nodes.putIfAbsent(child, true) == null
-                    print(node)
-                    print(rule)
-                    println(tmp)
                     return@filter tmp
                 }
-                .map {(child,rule) ->
+                .map { (child, rule) ->
                     object : INewNodeDescription<Symbols, Rule> {
                         override fun getFrom(): Symbols {
                             return node
@@ -136,8 +139,12 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbol
                         }
                     }
                 }
+        }?: emptyList()
 
-        }?.toList() ?: emptyList<INewNodeDescription<Symbols, Rule>>()
+        // todo: handle what happens if node has no children, but is not a leaf
+        // -> can happen because of filtering
+        adiacenceList.put(node, children)
+        return children
     }
 }
 
