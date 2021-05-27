@@ -11,7 +11,7 @@ import org.api4.java.ai.graphsearch.problem.pathsearch.pathevaluation.IPathEvalu
 import java.io.File
 import kotlin.concurrent.thread
 
-class Algorithm(maxIterations: Int = 100) {
+class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml") {
     private val inputChannel = Channel<ByteArray>()
     private val covChannel = Channel<ByteArray>()
     private lateinit var solution: EvaluatedSearchGraphPath<Symbols, Rule, Double>
@@ -20,7 +20,7 @@ class Algorithm(maxIterations: Int = 100) {
     init {
         val rawInput = PCFGSearchInput(
             Yaml(configuration = YamlConfiguration(polymorphismStyle = PolymorphismStyle.Property)).decodeFromString(
-                Grammar.serializer(), File("grammars/grammar.yaml").bufferedReader().readText()
+                Grammar.serializer(), File(grammar).bufferedReader().readText()
             )
         )
 
@@ -42,15 +42,11 @@ class Algorithm(maxIterations: Int = 100) {
         worker = thread { solution = mcts.call() }
     }
 
-    fun createInput(): ByteArray {
-        // await pop input-queue
-        return runBlocking { inputChannel.receive() }
-    }
+    fun createInput() =
+        runBlocking { inputChannel.receive() }
 
-    fun observe(coverage: ByteArray) {
-        // put into cov-queue
+    fun observe(coverage: ByteArray) =
         runBlocking { covChannel.send(coverage) }
-    }
 
     fun join() {
         worker.join()
