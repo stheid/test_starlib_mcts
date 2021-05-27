@@ -1,3 +1,5 @@
+import isml.aidev.Symbol
+import isml.aidev.Symbols
 import org.junit.jupiter.api.Test
 
 internal class SymbolsTest {
@@ -19,7 +21,7 @@ internal class SymbolsTest {
     @Test
     fun randomNT() {
         val symbols =  Symbols.fromCollection(
-            listOf(Symbol.NonTerminal("A"),Symbol.NonTerminal("B"))
+            listOf(Symbol.NonTerminal("A"), Symbol.NonTerminal("B"))
         )
 
         assert(symbols.expandableNT == symbols.expandableNT)

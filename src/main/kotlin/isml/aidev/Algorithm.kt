@@ -1,3 +1,5 @@
+package isml.aidev
+
 import ai.libs.jaicore.search.algorithms.mdp.mcts.uct.UCTFactory
 import ai.libs.jaicore.search.algorithms.standard.mcts.MCTSPathSearchFactory
 import ai.libs.jaicore.search.model.other.EvaluatedSearchGraphPath
@@ -10,6 +12,7 @@ import kotlinx.coroutines.runBlocking
 import org.api4.java.ai.graphsearch.problem.pathsearch.pathevaluation.IPathEvaluator
 import java.io.File
 import kotlin.concurrent.thread
+
 
 class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml") {
     private val inputChannel = Channel<ByteArray>()

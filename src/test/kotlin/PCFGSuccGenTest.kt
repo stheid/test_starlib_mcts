@@ -1,6 +1,8 @@
+import isml.aidev.PCFGSuccGen
+import isml.aidev.Rule
+import isml.aidev.Symbol
+import isml.aidev.Symbols
 import org.junit.jupiter.api.Test
-
-import org.junit.jupiter.api.Assertions.*
 
 internal class PCFGSuccGenTest {
     val prodRules = mapOf(

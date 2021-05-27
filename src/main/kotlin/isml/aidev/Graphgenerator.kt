@@ -1,9 +1,13 @@
+package isml.aidev
+
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.api4.java.ai.graphsearch.problem.IPathSearchInput
 import org.api4.java.ai.graphsearch.problem.implicit.graphgenerator.IPathGoalTester
-import org.api4.java.datastructure.graph.ILabeledPath
-import org.api4.java.datastructure.graph.implicit.*
+import org.api4.java.datastructure.graph.implicit.IGraphGenerator
+import org.api4.java.datastructure.graph.implicit.INewNodeDescription
+import org.api4.java.datastructure.graph.implicit.ISingleRootGenerator
+import org.api4.java.datastructure.graph.implicit.ISuccessorGenerator
 import java.util.concurrent.ConcurrentHashMap
 
 @Serializable
@@ -159,8 +163,8 @@ class PCFGSearchInput(private val grammar: Grammar) : IPathSearchInput<Symbols, 
     }
 }
 
-/*class PCFGPathEvaluator() : IPathEvaluator<Symbols, Rule, Float> {
-    override fun evaluate(path: ILabeledPath<Symbols, Rule>): Float {
+/*class PCFGPathEvaluator() : IPathEvaluator<isml.aidev.Symbols, isml.aidev.Rule, Float> {
+    override fun evaluate(path: ILabeledPath<isml.aidev.Symbols, isml.aidev.Rule>): Float {
         if (!path.head.isTerminalsOnly)
             throw RuntimeException("can't evaluate inner nodes")
         // TODO
