@@ -26,6 +26,7 @@ dependencies {
     implementation 'ai.libs:jaicore-search:0.2.4'
     implementation 'org.junit.jupiter:junit-jupiter:5.7.0'
     implementation 'org.slf4j:slf4j-simple:1.7.28'
+    implementation 'com.github.ajalt.clikt:clikt:3.2.0'
 }
 
 compileKotlin {
@@ -42,6 +43,6 @@ test {
 
 shadowJar {
     manifest {
-        attributes 'Main-Class': 'MainKt'
+        attributes 'Main-Class': 'CLIKt'
     }
 }
