@@ -16,7 +16,7 @@ import kotlin.concurrent.thread
 
 class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml") {
     private val inputChannel = Channel<ByteArray>()
-    private val covChannel = Channel<ByteArray>()
+    private val covChannel = Channel<Double>()
     private lateinit var solution: EvaluatedSearchGraphPath<Symbols, Rule, Double>
     private var worker: Thread
 
@@ -32,7 +32,7 @@ class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml") {
             runBlocking {
                 inputChannel.send(it.head.toString().toByteArray())
                 covChannel.receive()
-            }.sumOf { it.toInt().toDouble() }
+            }
         })
 
         // create MCTS algorithm
@@ -48,8 +48,8 @@ class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml") {
     fun createInput() =
         runBlocking { inputChannel.receive() }
 
-    fun observe(coverage: ByteArray) =
-        runBlocking { covChannel.send(coverage) }
+    fun observe(reward: Double) =
+        runBlocking { covChannel.send(reward) }
 
     fun join() {
         worker.join()
