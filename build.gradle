@@ -1,9 +1,17 @@
-plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.4.32'
-    id 'org.jetbrains.kotlin.plugin.serialization' version '1.4.32'
+buildscript {
+    ext {
+        kotlinVersion = '1.5.0'
+        jvmTarget = '11'
+    }
 }
 
-group = 'me.sheid'
+plugins {
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
+    id "org.jetbrains.kotlin.jvm" version "$kotlinVersion"
+    id "org.jetbrains.kotlin.plugin.serialization" version "$kotlinVersion"
+}
+
+group = 'de.upb.isml'
 version = '1.0-SNAPSHOT'
 
 repositories {
@@ -12,20 +20,29 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.1'
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.1"
     implementation 'com.charleskorn.kaml:kaml:0.33.0'
     implementation 'ai.libs:jaicore-search:0.2.4'
     implementation 'org.junit.jupiter:junit-jupiter:5.7.0'
-    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.28'
+    implementation 'org.slf4j:slf4j-simple:1.7.28'
+    implementation 'com.github.ajalt.clikt:clikt:3.2.0'
 }
+
 compileKotlin {
-    kotlinOptions.jvmTarget = '11'
+    kotlinOptions.jvmTarget = "$jvmTarget"
 }
 
 compileTestKotlin {
-    kotlinOptions.jvmTarget = '11'
+    kotlinOptions.jvmTarget = "$jvmTarget"
 }
 
 test {
     useJUnitPlatform()
+}
+
+shadowJar {
+    manifest {
+        attributes 'Main-Class': 'CLIKt'
+    }
 }
