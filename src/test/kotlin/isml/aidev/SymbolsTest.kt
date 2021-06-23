@@ -1,3 +1,5 @@
+package isml.aidev
+
 import isml.aidev.Symbol
 import isml.aidev.Symbols
 import org.junit.jupiter.api.Test

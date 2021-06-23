@@ -45,7 +45,7 @@ typealias ProdRules = Map<Symbol.NonTerminal, List<Rule>>
 // edge type
 // right hand side of a production rule
 @Serializable
-data class Rule(val substitution: List<Symbol>, val weight: Double) {
+data class Rule(val substitution: List<Symbol>, val weight: Double, val is_extending: Boolean) {
     override fun toString(): String {
         return " -> $substitution"
     }
@@ -65,13 +65,14 @@ class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<Symbols
 }
 
 
-data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>) {
+data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>, val pathLength: Int) {
     val expandableNT = nonTerminalIndices.withIndex().toList().randomOrNull()
 
     companion object {
         fun fromCollection(collection: List<Symbol>): Symbols {
             return Symbols(collection,
-                collection.withIndex().filter { it.value is Symbol.NonTerminal }.map { it.index })
+                collection.withIndex().filter { it.value is Symbol.NonTerminal }.map { it.index }, 0
+            )
         }
     }
 
@@ -91,7 +92,7 @@ data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>)
                 // shift elements after substitution by the size of the substitution
                 nonTerminalIndices.drop(expandableNT.index + 1).map { it + substitution.size - 1 }
 
-        return Symbols(str, indices)
+        return Symbols(str, indices, pathLength + 1)
     }
 
     val isTerminalsOnly: Boolean
@@ -105,7 +106,7 @@ data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>)
                     is Symbol.Terminal -> it.value
                 }
             }
-        return Triple(expandableNT?.value, symbols, nonTerminalIndices).toString()
+        return "<h>"+Triple(expandableNT?.value, symbols, nonTerminalIndices).toString()+"</h>"
     }
 }
 
@@ -143,7 +144,7 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbol
                         }
                     }
                 }
-        }?: emptyList()
+        } ?: emptyList()
 
         // todo: handle what happens if node has no children, but is not a leaf
         // -> can happen because of filtering

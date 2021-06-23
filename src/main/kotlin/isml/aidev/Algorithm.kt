@@ -1,5 +1,9 @@
 package isml.aidev
 
+import ai.libs.jaicore.graphvisualizer.plugin.graphview.GraphViewPlugin
+import ai.libs.jaicore.graphvisualizer.plugin.nodeinfo.NodeInfoGUIPlugin
+import ai.libs.jaicore.graphvisualizer.plugin.nodeinfo.NodeInfoGenerator
+import ai.libs.jaicore.graphvisualizer.window.AlgorithmVisualizationWindow
 import ai.libs.jaicore.search.algorithms.mdp.mcts.uct.UCTFactory
 import ai.libs.jaicore.search.algorithms.standard.mcts.MCTSPathSearchFactory
 import ai.libs.jaicore.search.model.other.EvaluatedSearchGraphPath
@@ -10,11 +14,12 @@ import com.charleskorn.kaml.YamlConfiguration
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.api4.java.ai.graphsearch.problem.pathsearch.pathevaluation.IPathEvaluator
+import org.api4.java.datastructure.graph.implicit.INewNodeDescription
 import java.io.File
 import kotlin.concurrent.thread
 
 
-class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml") {
+class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml", maxPathLength: Int = 20) {
     private val inputChannel = Channel<ByteArray>()
     private val covChannel = Channel<Double>()
     private lateinit var solution: EvaluatedSearchGraphPath<Symbols, Rule, Double>
@@ -37,9 +42,28 @@ class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml") {
 
         // create MCTS algorithm
         val factory = MCTSPathSearchFactory<Symbols, Rule>()
-        val uct = UCTFactory<Symbols, Rule>()
+        val uct = UCTFactory<Symbols, Rule>().withDefaultPolicy { symbols, rules ->
+            val stop_extending = symbols.pathLength > maxPathLength
+
+            rules.toList().choice(
+                p = rules.map { it.weight * if (stop_extending && it.is_extending) 1e-10 else 1.0 }.toDoubleArray()
+                    .normalize()
+            )
+        }
         uct.withMaxIterations(maxIterations)
         val mcts = factory.withMCTSFactory(uct).withProblem(input).algorithm
+
+//        val window = AlgorithmVisualizationWindow(mcts)
+//        window.withMainPlugin(GraphViewPlugin())
+//        window.withPlugin(NodeInfoGUIPlugin (object : NodeInfoGenerator <INewNodeDescription<Symbols, Rule>>{
+//            override fun getName(): String {
+//                return this.toString()
+//            }
+//
+//            override fun generateInfoForNode(node: INewNodeDescription<Symbols, Rule>): String {
+//                return node.toString()
+//            }
+//        }))
 
         // start mcts call in background
         worker = thread { solution = mcts.call() }

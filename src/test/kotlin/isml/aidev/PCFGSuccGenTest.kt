@@ -1,14 +1,12 @@
-import isml.aidev.PCFGSuccGen
-import isml.aidev.Rule
-import isml.aidev.Symbol
-import isml.aidev.Symbols
+package isml.aidev
+
 import org.junit.jupiter.api.Test
 
 internal class PCFGSuccGenTest {
     val prodRules = mapOf(
         Symbol.NonTerminal("A") to listOf(
-            Rule(listOf(Symbol.NonTerminal("A"), Symbol.Terminal("a")), 1.0),
-            Rule(listOf(Symbol.Terminal("a")), 1.0)
+            Rule(listOf(Symbol.NonTerminal("A"), Symbol.Terminal("a")), 1.0, true),
+            Rule(listOf(Symbol.Terminal("a")), 1.0, false)
         )
     )
 
@@ -25,7 +23,7 @@ internal class PCFGSuccGenTest {
         assert(
             succs == listOf(
                 listOf(Symbol.NonTerminal("A"), Symbol.Terminal("a")),
-                listOf( Symbol.Terminal("a"))
+                listOf(Symbol.Terminal("a"))
             )
         )
     }

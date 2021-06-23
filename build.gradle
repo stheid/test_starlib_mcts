@@ -9,23 +9,32 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '6.1.0'
     id "org.jetbrains.kotlin.jvm" version "$kotlinVersion"
     id "org.jetbrains.kotlin.plugin.serialization" version "$kotlinVersion"
+    id 'org.ajoberstar.grgit' version '4.1.0'
+    id 'org.openjfx.javafxplugin' version '0.0.5'
 }
 
 group = 'de.upb.isml'
-version = '1.0-SNAPSHOT'
+version = "0.1-${grgit.head().abbreviatedId}"
+
 
 repositories {
     mavenCentral()
     maven { url 'https://jitpack.io' }
 }
 
+javafx {
+    version = "13"
+    modules = ['javafx.controls', 'javafx.swing', 'javafx.web']
+}
+
 dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.2.1"
     implementation 'com.charleskorn.kaml:kaml:0.33.0'
-    implementation 'ai.libs:jaicore-search:0.2.4'
+    implementation 'com.github.starlibs:AILibs:master-SNAPSHOT'
     implementation 'org.junit.jupiter:junit-jupiter:5.7.0'
-    implementation 'org.slf4j:slf4j-simple:1.7.28'
+    implementation 'org.slf4j:slf4j-api:1.7.30'
+    implementation 'org.slf4j:slf4j-log4j12:1.7.30'
     implementation 'com.github.ajalt.clikt:clikt:3.2.0'
 }
 
@@ -46,3 +55,6 @@ shadowJar {
         attributes 'Main-Class': 'CLIKt'
     }
 }
+
+
+
