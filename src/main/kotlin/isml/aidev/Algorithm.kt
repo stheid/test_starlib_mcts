@@ -2,7 +2,6 @@ package isml.aidev
 
 import ai.libs.jaicore.graphvisualizer.plugin.graphview.GraphViewPlugin
 import ai.libs.jaicore.graphvisualizer.plugin.nodeinfo.NodeInfoGUIPlugin
-import ai.libs.jaicore.graphvisualizer.plugin.nodeinfo.NodeInfoGenerator
 import ai.libs.jaicore.graphvisualizer.window.AlgorithmVisualizationWindow
 import ai.libs.jaicore.search.algorithms.mdp.mcts.uct.UCTFactory
 import ai.libs.jaicore.search.algorithms.standard.mcts.MCTSPathSearchFactory
@@ -14,7 +13,6 @@ import com.charleskorn.kaml.YamlConfiguration
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.api4.java.ai.graphsearch.problem.pathsearch.pathevaluation.IPathEvaluator
-import org.api4.java.datastructure.graph.implicit.INewNodeDescription
 import java.io.File
 import kotlin.concurrent.thread
 
@@ -27,6 +25,7 @@ class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml", maxP
 
     init {
         val rawInput = PCFGSearchInput(
+            // parse grammar to object representation of the grammar
             Yaml(configuration = YamlConfiguration(polymorphismStyle = PolymorphismStyle.Property)).decodeFromString(
                 Grammar.serializer(), File(grammar).bufferedReader().readText()
             )
@@ -53,17 +52,9 @@ class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml", maxP
         uct.withMaxIterations(maxIterations)
         val mcts = factory.withMCTSFactory(uct).withProblem(input).algorithm
 
-//        val window = AlgorithmVisualizationWindow(mcts)
-//        window.withMainPlugin(GraphViewPlugin())
-//        window.withPlugin(NodeInfoGUIPlugin (object : NodeInfoGenerator <INewNodeDescription<Symbols, Rule>>{
-//            override fun getName(): String {
-//                return this.toString()
-//            }
-//
-//            override fun generateInfoForNode(node: INewNodeDescription<Symbols, Rule>): String {
-//                return node.toString()
-//            }
-//        }))
+        val window = AlgorithmVisualizationWindow(mcts)
+        window.withMainPlugin(GraphViewPlugin())
+        window.withPlugin(NodeInfoGUIPlugin { it.toString() })
 
         // start mcts call in background
         worker = thread { solution = mcts.call() }

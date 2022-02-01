@@ -13,7 +13,6 @@ class CLI : CliktCommand() {
         val algo = Algorithm(maxIterations, grammar, 20)
         repeat(maxIterations) {
             algo.createInput().decodeToString()
-//            algo.observe(listOf(1, 0, 0, 0).sumOf { it }.toDouble())
             algo.observe(Random.nextDouble(0.0, 1.0))
         }
         algo.join()
