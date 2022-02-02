@@ -47,7 +47,7 @@ class Algorithm(
         // create MCTS algorithm
         val factory = MCTSPathSearchFactory<Symbols, Rule>()
         val uct = UCTFactory<Symbols, Rule>().withDefaultPolicy { symbols, rules ->
-            val stop_extending = symbols.pathLength > maxPathLength
+            val stop_extending = symbols.depth > maxPathLength
 
             rules.toList().choice(
                 p = rules.map { it.weight * if (stop_extending && it.is_extending) 1e-10 else 1.0 }.toDoubleArray()

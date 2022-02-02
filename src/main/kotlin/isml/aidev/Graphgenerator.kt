@@ -56,7 +56,7 @@ class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<Symbols
     private val successorGenerator = PCFGSuccGen(grammar.prodRules)
 
     override fun getRootGenerator(): ISingleRootGenerator<Symbols> {
-        return ISingleRootGenerator<Symbols> { Symbols.fromCollection(listOf(grammar.startSymbol)) }
+        return ISingleRootGenerator<Symbols> { Symbols(hashSetOf(grammar.startSymbol)) }
     }
 
     override fun getSuccessorGenerator(): ISuccessorGenerator<Symbols, Rule> {
@@ -65,48 +65,44 @@ class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<Symbols
 }
 
 
-data class Symbols(val symbols: List<Symbol>, val nonTerminalIndices: List<Int>, val pathLength: Int) {
-    val expandableNT = nonTerminalIndices.withIndex().toList().randomOrNull()
+data class Symbols(
+    val NTs: HashSet<Symbol.NonTerminal>,
+    val root: Symbols? = null,
+    val depth: Int = 0
+) {
+    val currNT = NTs.let {
+        val nt = it.randomOrNull()
+        if (nt != null)
+            NTs.remove(nt)
+        nt
+    }
+    var succ: Symbols? = null
+    var toRule: Rule? = null
+    val isFinished: Boolean
+        get() = currNT == null
 
-    companion object {
-        fun fromCollection(collection: List<Symbol>): Symbols {
-            return Symbols(collection,
-                collection.withIndex().filter { it.value is Symbol.NonTerminal }.map { it.index }, 0
-            )
+    fun createChild(rule: Rule): Symbols {
+        val child = Symbols(
+            (NTs + rule.substitution.filterIsInstance(Symbol.NonTerminal::class.java)) as HashSet<Symbol.NonTerminal>,
+            root ?: this,
+            depth + 1
+        )
+        toRule = rule
+        succ = child
+        return child
+    }
+
+    fun toWord(): String {
+        if (!isFinished)
+            return ""
+
+        var node = root ?: this
+        val symbols = arrayListOf<Symbol>(node.currNT!!)
+        while (node.succ != null) {
+            symbols.addAll(symbols.indexOf(node.currNT!!), node.toRule!!.substitution)
+            node = node.succ!!
         }
-    }
-
-    fun createChild(substitution: List<Symbol>): Symbols {
-        require(expandableNT != null) { "cannot create childs when there are no nonterminals" }
-
-        val str = let {
-            val list = this.symbols.toMutableList()
-            list.removeAt(expandableNT.value)
-            list.addAll(expandableNT.value, substitution)
-            return@let list
-        }.toList()
-
-        val indices = nonTerminalIndices.take(expandableNT.index) +
-                // shift indices of the substitution by the offset of the index at which they are added
-                fromCollection(substitution).nonTerminalIndices.map { it + expandableNT.value } +
-                // shift elements after substitution by the size of the substitution
-                nonTerminalIndices.drop(expandableNT.index + 1).map { it + substitution.size - 1 }
-
-        return Symbols(str, indices, pathLength + 1)
-    }
-
-    val isTerminalsOnly: Boolean
-        get() = this.nonTerminalIndices.isEmpty()
-
-    override fun toString(): String {
-        if (isTerminalsOnly)
-            return symbols.joinToString(separator = "") {
-                when (it) {
-                    is Symbol.NonTerminal -> it.value
-                    is Symbol.Terminal -> it.value
-                }
-            }
-        return "<h>"+Triple(expandableNT?.value, symbols, nonTerminalIndices).toString()+"</h>"
+        return symbols.joinToString(separator = "")
     }
 }
 
@@ -122,9 +118,9 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbol
         }
 
         // else create new childs and filter for existing ones
-        val children = node.expandableNT?.let { nt ->
-            prodRules[node.symbols[nt.value] as Symbol.NonTerminal]!!
-                .map { node.createChild(it.substitution) to it }
+        val children = node.currNT?.let { nt ->
+            prodRules[node.currNT]!!
+                .map { node.createChild(it) to it }
                 .filter { (child, _) ->
                     val tmp = nodes.putIfAbsent(child, true) == null
                     return@filter tmp
@@ -160,18 +156,6 @@ class PCFGSearchInput(private val grammar: Grammar) : IPathSearchInput<Symbols, 
     }
 
     override fun getGoalTester(): IPathGoalTester<Symbols, Rule> {
-        return IPathGoalTester<Symbols, Rule> { path -> path.head.isTerminalsOnly }
+        return IPathGoalTester<Symbols, Rule> { path -> path.head.isFinished }
     }
 }
-
-/*class PCFGPathEvaluator() : IPathEvaluator<isml.aidev.Symbols, isml.aidev.Rule, Float> {
-    override fun evaluate(path: ILabeledPath<isml.aidev.Symbols, isml.aidev.Rule>): Float {
-        if (!path.head.isTerminalsOnly)
-            throw RuntimeException("can't evaluate inner nodes")
-        // TODO
-
-        // calculate performance with respect to the already observed
-
-        //
-    }
-}*/
