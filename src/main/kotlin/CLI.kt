@@ -12,7 +12,7 @@ class CLI : CliktCommand() {
     override fun run() {
         val algo = Algorithm(maxIterations, grammar, 20)
         repeat(maxIterations) {
-            algo.createInput().decodeToString()
+            println(algo.createInput().decodeToString())
             algo.observe(Random.nextDouble(0.0, 1.0))
         }
         algo.join()

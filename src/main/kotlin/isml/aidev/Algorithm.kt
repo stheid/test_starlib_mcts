@@ -7,19 +7,15 @@ import ai.libs.jaicore.search.algorithms.mdp.mcts.uct.UCTFactory
 import ai.libs.jaicore.search.algorithms.standard.mcts.MCTSPathSearchFactory
 import ai.libs.jaicore.search.model.other.EvaluatedSearchGraphPath
 import ai.libs.jaicore.search.probleminputs.GraphSearchWithPathEvaluationsInput
-import com.charleskorn.kaml.PolymorphismStyle
-import com.charleskorn.kaml.Yaml
-import com.charleskorn.kaml.YamlConfiguration
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.api4.java.ai.graphsearch.problem.pathsearch.pathevaluation.IPathEvaluator
-import java.io.File
 import kotlin.concurrent.thread
 
 
 class Algorithm(
     maxIterations: Int = 100,
-    grammar: String = "grammar.yaml",
+    grammarPath: String = "grammar.yaml",
     maxPathLength: Int = 20,
     headless: Boolean = true,
 ) {
@@ -31,15 +27,13 @@ class Algorithm(
     init {
         val rawInput = PCFGSearchInput(
             // parse grammar to object representation of the grammar
-            Yaml(configuration = YamlConfiguration(polymorphismStyle = PolymorphismStyle.Property)).decodeFromString(
-                Grammar.serializer(), File(grammar).bufferedReader().readText()
-            )
+            Grammar.fromFile(grammarPath)
         )
 
         // create a version with costs
         val input = GraphSearchWithPathEvaluationsInput(rawInput, IPathEvaluator {
             runBlocking {
-                inputChannel.send(it.head.toString().toByteArray())
+                inputChannel.send(it.head.toWord().toByteArray())
                 covChannel.receive()
             }
         })

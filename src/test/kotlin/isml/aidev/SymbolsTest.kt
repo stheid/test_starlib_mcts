@@ -1,35 +1,41 @@
 package isml.aidev
 
-import isml.aidev.Symbol
-import isml.aidev.Symbols
 import org.junit.jupiter.api.Test
 
 internal class SymbolsTest {
+    private val grammar = Grammar.fromFile(SymbolsTest::class.java.getResource("/test_gram.yaml")!!.path)
 
     @Test
     fun createChild() {
-        val child = Symbols.fromCollection(listOf(Symbol.NonTerminal("A")))
-            .createChild( listOf(Symbol.NonTerminal("B")))
-        assert(child.nonTerminalIndices == listOf(0))
+        var node = Symbols(arrayListOf(grammar.startSymbol))
+        listOf(
+            grammar.prodRules[Symbol.NonTerminal("S")]!![1],
+            grammar.prodRules[Symbol.NonTerminal("A")]!![1],
+            grammar.prodRules[Symbol.NonTerminal("A")]!![1],
+        ).forEach{
+            node = node.createChild(it)
+        }
+
+        println(node.isFinished)
+        println(node.toWord())
     }
 
     @Test
-    fun hasNoChilds() {
-        val child = Symbols.fromCollection(listOf(Symbol.NonTerminal("A")))
-            .createChild( listOf(Symbol.Terminal("b")))
-        assert(child.isTerminalsOnly)
+    fun createChild2() {
+        var node = Symbols(arrayListOf(grammar.startSymbol))
+        listOf(
+            grammar.prodRules[Symbol.NonTerminal("S")]!![1],
+            grammar.prodRules[Symbol.NonTerminal("A")]!![0],
+            grammar.prodRules[Symbol.NonTerminal("A")]!![0],
+        ).forEach{
+            node = node.createChild(it)
+        }
+
+        println(node.isFinished)
+        println(node.toWord())
     }
 
     @Test
-    fun randomNT() {
-        val symbols =  Symbols.fromCollection(
-            listOf(Symbol.NonTerminal("A"), Symbol.NonTerminal("B"))
-        )
-
-        assert(symbols.expandableNT == symbols.expandableNT)
-    }
-
-    @Test
-    fun isTerminalsOnly() {
+    fun toWord() {
     }
 }

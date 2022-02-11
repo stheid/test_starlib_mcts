@@ -1,5 +1,8 @@
 package isml.aidev
 
+import com.charleskorn.kaml.PolymorphismStyle
+import com.charleskorn.kaml.Yaml
+import com.charleskorn.kaml.YamlConfiguration
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.api4.java.ai.graphsearch.problem.IPathSearchInput
@@ -8,6 +11,7 @@ import org.api4.java.datastructure.graph.implicit.IGraphGenerator
 import org.api4.java.datastructure.graph.implicit.INewNodeDescription
 import org.api4.java.datastructure.graph.implicit.ISingleRootGenerator
 import org.api4.java.datastructure.graph.implicit.ISuccessorGenerator
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 @Serializable
@@ -35,6 +39,14 @@ data class Grammar(
     val startSymbol: Symbol.NonTerminal,
     private val prodRules_: Map<String, List<Rule>>
 ) {
+    companion object {
+        fun fromFile(path: String): Grammar {
+            return Yaml(configuration = YamlConfiguration(polymorphismStyle = PolymorphismStyle.Property)).decodeFromString(
+                serializer(), File(path).bufferedReader().readText()
+            )
+        }
+    }
+
     val prodRules
         get() = prodRules_.map { Symbol.NonTerminal(it.key) to it.value }.associate { it }
 }
@@ -56,7 +68,7 @@ class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<Symbols
     private val successorGenerator = PCFGSuccGen(grammar.prodRules)
 
     override fun getRootGenerator(): ISingleRootGenerator<Symbols> {
-        return ISingleRootGenerator<Symbols> { Symbols(hashSetOf(grammar.startSymbol)) }
+        return ISingleRootGenerator<Symbols> { Symbols(arrayListOf(grammar.startSymbol)) }
     }
 
     override fun getSuccessorGenerator(): ISuccessorGenerator<Symbols, Rule> {
@@ -66,16 +78,17 @@ class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<Symbols
 
 
 data class Symbols(
-    val NTs: HashSet<Symbol.NonTerminal>,
+    val NTs: ArrayList<Symbol.NonTerminal>,
     val root: Symbols? = null,
     val depth: Int = 0
 ) {
     val currNT = NTs.let {
-        val nt = it.randomOrNull()
-        if (nt != null)
-            NTs.remove(nt)
-        nt
+        val idx = (0 until it.size).randomOrNull()
+        if (idx != null)
+            return@let NTs.removeAt(idx)
+        return@let null
     }
+
     var succ: Symbols? = null
     var toRule: Rule? = null
     val isFinished: Boolean
@@ -83,7 +96,7 @@ data class Symbols(
 
     fun createChild(rule: Rule): Symbols {
         val child = Symbols(
-            (NTs + rule.substitution.filterIsInstance(Symbol.NonTerminal::class.java)) as HashSet<Symbol.NonTerminal>,
+            (NTs + rule.substitution.filterIsInstance(Symbol.NonTerminal::class.java)) as ArrayList<Symbol.NonTerminal>,
             root ?: this,
             depth + 1
         )
@@ -97,12 +110,17 @@ data class Symbols(
             return ""
 
         var node = root ?: this
-        val symbols = arrayListOf<Symbol>(node.currNT!!)
+        var symbols = arrayListOf<Symbol>(node.currNT!!)
         while (node.succ != null) {
-            symbols.addAll(symbols.indexOf(node.currNT!!), node.toRule!!.substitution)
+            // todo get the right index and not any index!!
+            symbols = (symbols.take(symbols.indexOf(node.currNT!!))
+                    + node.toRule!!.substitution
+                    + symbols.drop(symbols.indexOf(node.currNT!!) + 1)) as ArrayList<Symbol>
             node = node.succ!!
         }
-        return symbols.joinToString(separator = "")
+
+        // todo there are somehow a lot of nonterminals left. is it again because of the epsilon rules?
+        return symbols.filterIsInstance(Symbol.Terminal::class.java).joinToString(separator = "") { it.value }
     }
 }
 
@@ -144,7 +162,7 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbol
 
         // todo: handle what happens if node has no children, but is not a leaf
         // -> can happen because of filtering
-        adiacenceList.put(node, children)
+        adiacenceList[node] = children
         return children
     }
 }
