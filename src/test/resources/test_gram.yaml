@@ -8,7 +8,7 @@ prodRules_:
           value: B
         - type: nonterminal
           value: A
-      weight: 1
+      weight: 8
     - is_extending: true
       substitution:
         - type: nonterminal

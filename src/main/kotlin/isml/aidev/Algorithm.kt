@@ -7,6 +7,7 @@ import ai.libs.jaicore.search.algorithms.mdp.mcts.uct.UCTFactory
 import ai.libs.jaicore.search.algorithms.standard.mcts.MCTSPathSearchFactory
 import ai.libs.jaicore.search.model.other.EvaluatedSearchGraphPath
 import ai.libs.jaicore.search.probleminputs.GraphSearchWithPathEvaluationsInput
+import isml.aidev.starlib.PCFGSearchInput
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.api4.java.ai.graphsearch.problem.pathsearch.pathevaluation.IPathEvaluator
@@ -21,7 +22,7 @@ class Algorithm(
 ) {
     private val inputChannel = Channel<ByteArray>()
     private val covChannel = Channel<Double>()
-    private lateinit var solution: EvaluatedSearchGraphPath<Symbols, Rule, Double>
+    private lateinit var solution: EvaluatedSearchGraphPath<SymbolsNode, RuleEdge, Double>
     private var worker: Thread
 
     init {
@@ -39,8 +40,8 @@ class Algorithm(
         })
 
         // create MCTS algorithm
-        val factory = MCTSPathSearchFactory<Symbols, Rule>()
-        val uct = UCTFactory<Symbols, Rule>().withDefaultPolicy { symbols, rules ->
+        val factory = MCTSPathSearchFactory<SymbolsNode, RuleEdge>()
+        val uct = UCTFactory<SymbolsNode, RuleEdge>().withDefaultPolicy { symbols, rules ->
             val stop_extending = symbols.depth > maxPathLength
 
             rules.toList().choice(
