@@ -40,7 +40,7 @@ sealed class Symbol {
         }
     }
 
-    data class UniqueNT(val nonTerminal: Symbol.NonTerminal){
+    data class UniqueNT(val nonTerminal: NonTerminal):Symbol(){
         val uuid = Random.nextLong()
 
         override fun toString(): String {
@@ -58,9 +58,7 @@ sealed class Symbol {
             result = 31 * result + uuid.hashCode()
             return result
         }
-
     }
-
 }
 
 
