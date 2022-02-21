@@ -51,6 +51,8 @@ class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml", maxP
         }
         uct.withMaxIterations(maxIterations)
         val mcts = factory.withMCTSFactory(uct).withProblem(input).algorithm
+        mcts.numCPUs = 8
+        mcts.setMaxNumThreads(16)
 
         val window = AlgorithmVisualizationWindow(mcts)
         window.withMainPlugin(GraphViewPlugin())
