@@ -1,29 +1,83 @@
 package isml.aidev.util
 
-class Chain<T>(sequence: Sequence<T>) : Sequence<T> {
+class Chain<T>(list: List<T>) : Sequence<T> {
     var first: ChainLink<T>
     var last: ChainLink<T>
 
     init {
         // create a link for each individual and then link them
-        sequence
-            .map { ChainLink(it) }
-            .apply {
-                first = this.first()
-                last = this.last()
+        list
+            .map { ChainLink(it, this) }
+            .also {
+                first = it.first()
+                last = it.last()
             }
             .zipWithNext()
             .forEach { (a, b) ->
-                a.succ = b
-                b.pred = a
+                a.succ = b // automatically adds back reference
             }
     }
 
     override fun iterator(): Iterator<T> {
-        TODO("Not    yet implemented")
+        return object : Iterator<T> {
+            var node: ChainLink<T>? = first
+
+            override fun hasNext(): Boolean {
+                return node != null
+            }
+
+            override fun next(): T {
+                val curNode = node!!
+                node = node!!.succ
+                return curNode.value
+            }
+        }
+    }
+
+    fun linkIterator(): Iterator<ChainLink<T>> {
+        return object : Iterator<ChainLink<T>> {
+            var node: ChainLink<T>? = first
+
+            override fun hasNext(): Boolean {
+                return node != null
+            }
+
+            override fun next(): ChainLink<T> {
+                val curNode = node!!
+                node = node!!.succ
+                return curNode
+            }
+        }
+    }
+
+    /**
+     * substitute "this" with a chain of links
+     *
+     * will basically clear all references to "this" and nit in references to the start and end of chain.
+     * @return return the provided chain object embedded in the larger chain
+     */
+    fun substitute(oldLink: ChainLink<T>, newChain: Chain<T>) {
+        if (oldLink.chain != this) {
+            throw IllegalArgumentException("The provided ChainLink is not part of the chain. Can't substitute")
+        }
+
+        // substitute all references to oldLink with references to the new chain
+        // either overwrite predecessors succ-pointer or the chain.first pointer
+        oldLink.pred
+            ?.apply { succ = newChain.first }
+            ?: run { first = newChain.first }
+
+        oldLink.succ
+            ?.apply { pred = newChain.last }
+            ?: run { last = newChain.last }
+
+        // substitute all references to the newChain object with this chain
+        newChain.linkIterator().forEach {
+            it.chain = this
+        }
     }
 
     override fun toString(): String {
-        return super.toString()
+        return this.iterator().asSequence().joinToString(separator = " <-> ")
     }
 }
