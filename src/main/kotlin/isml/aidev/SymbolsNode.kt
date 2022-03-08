@@ -37,10 +37,10 @@ data class SymbolsNode(
         var symbols = arrayListOf(node.currNT!!)
         while (node.succ != null) {
             // todo get the right index and not any index!!
-            symbols = (symbols.take(symbols.indexOf(node.currNT!!))
+         /*   symbols = (symbols.take(symbols.indexOf(node.currNT!!))
                     + node.toRule!!.substitution
                     + symbols.drop(symbols.indexOf(node.currNT!!) + 1)) as ArrayList<Symbol>
-            node = node.succ!!
+           */ node = node.succ!!
         }
 
         // todo there are somehow a lot of nonterminals left. is it again because of the epsilon rules?

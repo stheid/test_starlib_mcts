@@ -5,7 +5,6 @@ class ChainLink<T>(val value: T)  {
         set(value) {
             field = value
             value?.succ = this
-            first = value?.first
         }
     var succ: ChainLink<T>? = null
         set(value) {
@@ -22,12 +21,12 @@ class ChainLink<T>(val value: T)  {
     fun substitute(chain: Chain<T>) {
         val chainHead = chain.first
         val chainTail = chain.last
-        chain.forEach { it.first = first }
+ //       chain.forEach { it.first = first }
         pred?.succ = chainHead
         succ?.pred = chainTail
 
     }
-
+/*
     override fun iterator(): Iterator<T> {
         return object : Iterator<T> {
             var pointer = first
@@ -42,4 +41,5 @@ class ChainLink<T>(val value: T)  {
             }
         }
     }
+ */
 }
