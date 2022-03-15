@@ -56,8 +56,6 @@ class Algorithm(
         }
         uct.withMaxIterations(maxIterations)
         val mcts = factory.withMCTSFactory(uct).withProblem(input).algorithm
-        mcts.numCPUs = 8
-        mcts.setMaxNumThreads(16)
 
         if (!headless) {
             val window = AlgorithmVisualizationWindow(mcts)
