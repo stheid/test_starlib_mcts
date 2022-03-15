@@ -17,7 +17,12 @@ import java.io.File
 import kotlin.concurrent.thread
 
 
-class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml", maxPathLength: Int = 20) {
+class Algorithm(
+    maxIterations: Int = 100,
+    grammar: String = "grammar.yaml",
+    maxPathLength: Int = 20,
+    headless: Boolean = true,
+) {
     private val inputChannel = Channel<ByteArray>()
     private val covChannel = Channel<Double>()
     private lateinit var solution: EvaluatedSearchGraphPath<Symbols, Rule, Double>
@@ -54,9 +59,11 @@ class Algorithm(maxIterations: Int = 100, grammar: String = "grammar.yaml", maxP
         mcts.numCPUs = 8
         mcts.setMaxNumThreads(16)
 
-        val window = AlgorithmVisualizationWindow(mcts)
-        window.withMainPlugin(GraphViewPlugin())
-        window.withPlugin(NodeInfoGUIPlugin { it.toString() })
+        if (!headless) {
+            val window = AlgorithmVisualizationWindow(mcts)
+            window.withMainPlugin(GraphViewPlugin())
+            window.withPlugin(NodeInfoGUIPlugin { it.toString() })
+        }
 
         // start mcts call in background
         worker = thread { solution = mcts.call() }
