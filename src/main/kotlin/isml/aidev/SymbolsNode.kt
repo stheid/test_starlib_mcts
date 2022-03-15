@@ -34,7 +34,7 @@ data class SymbolsNode(
             return ""
 
         var node = root ?: this
-        var symbols = arrayListOf(node.currNT!!)
+        val symbols = arrayListOf(node.currNT!!)
         while (node.succ != null) {
             // todo get the right index and not any index!!
          /*   symbols = (symbols.take(symbols.indexOf(node.currNT!!))
