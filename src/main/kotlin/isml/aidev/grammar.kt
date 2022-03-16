@@ -20,17 +20,41 @@ sealed class Symbol {
 
     @SerialName("nonterminal")
     @Serializable
-    data class NonTerminal(val value: String) : Symbol() {
-        val uuid = Random.nextLong()
-
+    open class NonTerminal(val value: String) : Symbol() {
         override fun toString(): String {
             return "nt: ${value}"
         }
 
         override fun equals(other: Any?): Boolean {
-            if (other is NonTerminal)
-                return value == other.value && uuid == other.uuid
-            return false
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as NonTerminal
+
+            if (value != other.value) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            return value.hashCode()
+        }
+    }
+
+    class UniqueNT(value: String) : NonTerminal(value) {
+        constructor(nt: NonTerminal) : this(nt.value)
+
+        val uuid = Random.nextLong()
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as UniqueNT
+
+            if (value != other.value) return false
+            if (uuid != other.uuid) return false
+
+            return true
         }
 
         override fun hashCode(): Int {
@@ -39,34 +63,13 @@ sealed class Symbol {
             return result
         }
     }
-
-    data class UniqueNT(val nonTerminal: NonTerminal):Symbol(){
-        val uuid = Random.nextLong()
-
-        override fun toString(): String {
-            return nonTerminal.toString()
-        }
-
-        override fun equals(other: Any?): Boolean {
-            if (other is UniqueNT)
-                return nonTerminal==other.nonTerminal && uuid == other.uuid
-            return super.equals(other)
-        }
-
-        override fun hashCode(): Int {
-            var result = nonTerminal.hashCode()
-            result = 31 * result + uuid.hashCode()
-            return result
-        }
-    }
 }
-
 
 
 @Serializable
 data class Grammar(
     val startSymbol: Symbol.NonTerminal,
-    private val prodRules_: Map<String, List<RuleEdge>>
+    private val prodRules_: Map<String, List<RuleEdge>>,
 ) {
     companion object {
         fun fromFile(path: String): Grammar {

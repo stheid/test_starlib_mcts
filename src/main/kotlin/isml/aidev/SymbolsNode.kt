@@ -1,9 +1,11 @@
 package isml.aidev
 
+import isml.aidev.util.Chain
+
 data class SymbolsNode(
     val NTs: ArrayList<Symbol.UniqueNT>,
     val root: SymbolsNode? = null,
-    val depth: Int = 0
+    val depth: Int = 0,
 ) {
     val currNT = NTs.let {
         if (NTs.isNotEmpty())
@@ -13,34 +15,46 @@ data class SymbolsNode(
     }
 
     var succ: SymbolsNode? = null
-    var toRule: RuleEdge? = null
+    var substitution: List<Symbol>? = null
     val isFinished: Boolean
         get() = currNT == null
 
     fun createChild(rule: RuleEdge): SymbolsNode {
+        val sub = rule.substitution.map { if (it is Symbol.NonTerminal) Symbol.UniqueNT(it) else it }
+
         val child = SymbolsNode(
-            (NTs + rule.substitution.filterIsInstance(Symbol.NonTerminal::class.java).map { Symbol.UniqueNT(it) })
-                .shuffled() as ArrayList<Symbol.UniqueNT>,
+            (NTs + sub.filterIsInstance<Symbol.UniqueNT>().shuffled()) as ArrayList<Symbol.UniqueNT>,
             root ?: this,
             depth + 1
         )
-        toRule = rule
+        substitution = sub
         succ = child
         return child
     }
+
 
     fun toWord(): String {
         if (!isFinished)
             return ""
 
         var node = root ?: this
-        val symbols = arrayListOf(node.currNT!!)
+        var symbol = node.currNT!!
+        val symbols = Chain(listOf(symbol as Symbol))
+        val nts = hashMapOf(symbol to symbols.linkIterator().asSequence().first())
+
         while (node.succ != null) {
-            // todo get the right index and not any index!!
-         /*   symbols = (symbols.take(symbols.indexOf(node.currNT!!))
-                    + node.toRule!!.substitution
-                    + symbols.drop(symbols.indexOf(node.currNT!!) + 1)) as ArrayList<Symbol>
-           */ node = node.succ!!
+            symbol = node.currNT!!
+
+            if (node.substitution!!.isNotEmpty()) {
+                val substChain = Chain(node.substitution!!).also { chain ->
+                    chain.linkIterator().asSequence().filter { it.value is Symbol.UniqueNT }.forEach {
+                        nts[it.value as Symbol.UniqueNT] = it
+                    }
+                }
+                symbols.substitute(nts[symbol]!!, substChain)
+            }
+
+            node = node.succ!!
         }
 
         // todo there are somehow a lot of nonterminals left. is it again because of the epsilon rules?

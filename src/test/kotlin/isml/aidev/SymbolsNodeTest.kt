@@ -1,11 +1,13 @@
 package isml.aidev
 
-internal class SymbolsTest {
-    private val grammar = Grammar.fromFile(SymbolsTest::class.java.getResource("/test_gram.yaml")!!.path)
-/*
+import org.junit.jupiter.api.Test
+
+internal class SymbolsNodeTest {
+    private val grammar = Grammar.fromFile(SymbolsNodeTest::class.java.getResource("/test_gram.yaml")!!.path)
+
     @Test
     fun createChild() {
-        var node = SymbolsNode(arrayListOf(grammar.startSymbol))
+        var node = SymbolsNode(arrayListOf(Symbol.UniqueNT(grammar.startSymbol)))
         listOf(
             grammar.prodRules[Symbol.NonTerminal("S")]!![1],
             grammar.prodRules[Symbol.NonTerminal("A")]!![1],
@@ -20,7 +22,7 @@ internal class SymbolsTest {
 
     @Test
     fun createChild2() {
-        var node = SymbolsNode(arrayListOf(grammar.startSymbol))
+        var node = SymbolsNode(arrayListOf(Symbol.UniqueNT(grammar.startSymbol)))
         listOf(
             grammar.prodRules[Symbol.NonTerminal("S")]!![1],
             grammar.prodRules[Symbol.NonTerminal("A")]!![0],
@@ -36,6 +38,4 @@ internal class SymbolsTest {
     @Test
     fun toWord() {
     }
-
- */
 }
