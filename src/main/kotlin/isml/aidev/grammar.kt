@@ -26,10 +26,8 @@ sealed class Symbol {
         }
 
         override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
             other as NonTerminal
+            if (this === other) return true
 
             if (value != other.value) return false
 
@@ -47,7 +45,10 @@ sealed class Symbol {
         val uuid = Random.nextLong()
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (javaClass != other?.javaClass) return false
+
+            // if type mixed, we call "NonTerminal" equal method for comparison
+            if (javaClass != other?.javaClass)
+                return super.equals(other)
 
             other as UniqueNT
 

@@ -7,15 +7,10 @@ data class SymbolsNode(
     val root: SymbolsNode? = null,
     val depth: Int = 0,
 ) {
-    val currNT = NTs.let {
-        if (NTs.isNotEmpty())
-            return@let NTs.removeLast()
-        else
-            return@let null
-    }
+    val currNT = NTs.removeLastOrNull()
+    private var substitution: List<Symbol>? = null
+    private var succ: SymbolsNode? = null
 
-    var succ: SymbolsNode? = null
-    var substitution: List<Symbol>? = null
     val isFinished: Boolean
         get() = currNT == null
 
@@ -38,20 +33,25 @@ data class SymbolsNode(
             return ""
 
         var node = root ?: this
-        var symbol = node.currNT!!
+        val symbol = node.currNT!!
         val symbols = Chain(listOf(symbol as Symbol))
         val nts = hashMapOf(symbol to symbols.linkIterator().asSequence().first())
 
         while (node.succ != null) {
-            symbol = node.currNT!!
+            // dereference chainlink (GC) and prepare for substitution
+            val linkToSubstitute = nts.remove(node.currNT!!)!!
 
+            // for non-ε rules:
             if (node.substitution!!.isNotEmpty()) {
-                val substChain = Chain(node.substitution!!).also { chain ->
-                    chain.linkIterator().asSequence().filter { it.value is Symbol.UniqueNT }.forEach {
-                        nts[it.value as Symbol.UniqueNT] = it
-                    }
+                val substChain = Chain(node.substitution!!)
+
+                // store references to chainlinks containing non-terminals
+                substChain.linkIterator().asSequence().filter { it.value is Symbol.UniqueNT }.forEach {
+                    nts[it.value as Symbol.UniqueNT] = it
                 }
-                symbols.substitute(nts[symbol]!!, substChain)
+
+                // substitute chainlink with chain
+                linkToSubstitute.substitute(substChain)
             }
 
             node = node.succ!!
@@ -61,58 +61,3 @@ data class SymbolsNode(
         return symbols.filterIsInstance(Symbol.Terminal::class.java).joinToString(separator = "") { it.value }
     }
 }
-
-/*
-data class SymbolsNode(
-    val symbols :List<Symbol>,
-    val NTs: ArrayList<Symbol.NonTerminal>,
-    val root: SymbolsNode? = null,
-    val depth: Int = 0
-) {
-    val expandableNT = NTs.randomOrNull()
-
-    companion object {
-        fun fromCollection(collection: List<Symbol>): SymbolsNode {
-            return SymbolsNode(
-                collection,
-                collection.filterIsInstance(Symbol.NonTerminal::class.java) as ArrayList<Symbol.NonTerminal>,
-                depth = 0
-            )
-        }
-    }
-
-
-    val isFinished: Boolean
-        get() = NTs.isEmpty()
-
-    fun createChild(substitution: List<Symbol>): SymbolsNode {
-        require(expandableNT != null) { "cannot create childs when there are no nonterminals" }
-
-        val str = let {
-            val list = symbols.toMutableList()
-            list.removeAt(expandableNT)
-            list.addAll(expandableNT, substitution)
-            return@let list
-        }.toList()
-
-        val indices = NTs.take(expandableNT.index) +
-                // shift indices of the substitution by the offset of the index at which they are added
-                fromCollection(substitution).NTs.map { it + expandableNT.value } +
-                // shift elements after substitution by the size of the substitution
-                NTs.drop(expandableNT.index + 1).map { it + substitution.size - 1 }
-
-        return SymbolsNode(str, indices, depth + 1)
-    }
-
-
-    override fun toWord(): String {
-        if (isFinished)
-            return symbols.joinToString(separator = "") {
-                when (it) {
-                    is Symbol.NonTerminal -> it.value
-                    is Symbol.Terminal -> it.value
-                }
-            }
-        return "<h>" + Triple(expandableNT?.value, symbols, nonTerminalIndices).toString() + "</h>"
-    }
-}*/

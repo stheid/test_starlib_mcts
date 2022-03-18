@@ -2,6 +2,7 @@ package isml.aidev
 
 import ai.libs.jaicore.graphvisualizer.plugin.graphview.GraphViewPlugin
 import ai.libs.jaicore.graphvisualizer.plugin.nodeinfo.NodeInfoGUIPlugin
+import ai.libs.jaicore.graphvisualizer.plugin.nodeinfo.NodeInfoGenerator
 import ai.libs.jaicore.graphvisualizer.window.AlgorithmVisualizationWindow
 import ai.libs.jaicore.search.algorithms.mdp.mcts.uct.UCTFactory
 import ai.libs.jaicore.search.algorithms.standard.mcts.MCTSPathSearchFactory
@@ -55,7 +56,7 @@ class Algorithm(
         if (!headless) {
             val window = AlgorithmVisualizationWindow(mcts)
             window.withMainPlugin(GraphViewPlugin())
-            window.withPlugin(NodeInfoGUIPlugin { it.toString() })
+            window.withPlugin(NodeInfoGUIPlugin(NodeInfoGenerator<SymbolsNode> { it.toWord() }))
         }
 
         // start mcts call in background

@@ -19,13 +19,11 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbol
         }
 
         // else create new childs and filter for existing ones
-        val children = emptyList<INewNodeDescription<SymbolsNode, RuleEdge>>()
-
-        /* node.currNT?.let { nt ->
-            prodRules[node.currNT]!!
+        val children =  node.currNT?.let { nt ->
+            prodRules[nt]!!
                 .map { node.createChild(it) to it }
                 .filter { (child, _) ->
-                    return@filter nodes.putIfAbsent(child, true) == null
+                    nodes.putIfAbsent(child, true) == null
                 }
                 .map { (child, rule) ->
                     object : INewNodeDescription<SymbolsNode, RuleEdge> {
@@ -42,7 +40,7 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbol
                         }
                     }
                 }
-        } ?: emptyList()*/
+        } ?: emptyList()
 
         // todo: handle what happens if node has no children, but is not a leaf
         // -> can happen because of filtering

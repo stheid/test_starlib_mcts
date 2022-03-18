@@ -6,6 +6,7 @@ internal class SymbolTest {
     @Test
     fun ntEquality() = assert(Symbol.NonTerminal("f") == Symbol.NonTerminal("f"))
 
+
     @Test
     fun uniqueNtEquality() = assert(Symbol.UniqueNT("f") != Symbol.UniqueNT("f"))
 
@@ -14,5 +15,11 @@ internal class SymbolTest {
         val nt = Symbol.NonTerminal("f")
         assert(Symbol.UniqueNT(nt) != Symbol.UniqueNT(nt))
     }
+
+    @Test
+    fun ntEqualityMixed() = assert(Symbol.NonTerminal("f") == Symbol.UniqueNT("f"))
+
+    @Test
+    fun ntEqualityMixed2() = assert(Symbol.UniqueNT("f") == Symbol.NonTerminal("f"))
 }
 
