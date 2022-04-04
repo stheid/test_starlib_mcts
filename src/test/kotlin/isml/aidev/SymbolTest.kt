@@ -1,25 +1,21 @@
 package isml.aidev
 
+import isml.aidev.util.Unique
 import org.junit.jupiter.api.Test
 
 internal class SymbolTest {
-    @Test
-    fun ntEquality() = assert(Symbol.NonTerminal("f") == Symbol.NonTerminal("f"))
-
+    val nt = Symbol.NonTerminal("f")
 
     @Test
-    fun uniqueNtEquality() = assert(Symbol.UniqueNT("f") != Symbol.UniqueNT("f"))
+    fun ntEquality() = assert(nt == nt)
+
+    @Test
+    fun uniqueNtEquality() = assert(Unique(nt) != Unique(nt))
 
     @Test
     fun uniqueNtEquality2() {
-        val nt = Symbol.NonTerminal("f")
-        assert(Symbol.UniqueNT(nt) != Symbol.UniqueNT(nt))
+        val uniqueNT = Unique(nt)
+        assert(uniqueNT == uniqueNT)
     }
-
-    @Test
-    fun ntEqualityMixed() = assert(Symbol.NonTerminal("f") == Symbol.UniqueNT("f"))
-
-    @Test
-    fun ntEqualityMixed2() = assert(Symbol.UniqueNT("f") == Symbol.NonTerminal("f"))
 }
 

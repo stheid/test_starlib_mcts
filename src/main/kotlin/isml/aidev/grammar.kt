@@ -6,40 +6,27 @@ import com.charleskorn.kaml.YamlConfiguration
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.io.File
-import kotlin.random.Random
+
 
 @Serializable
 sealed class Symbol {
     @SerialName("terminal")
     @Serializable
-    data class Terminal(val value: String) : Symbol() {
+    data class Terminal(val value: String) : Symbol (){
         override fun toString(): String {
-            return "term: ${value}"
+            return "term: $value"
         }
     }
 
     @SerialName("nonterminal")
     @Serializable
-    open class NonTerminal(val value: String) : Symbol() {
+    data class NonTerminal(val value: String) : Symbol() {
         override fun toString(): String {
-            return "nt: ${value}"
-        }
-
-        override fun equals(other: Any?): Boolean {
-            other as NonTerminal
-            if (this === other) return true
-
-            if (value != other.value) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            return value.hashCode()
+            return "nt: $value"
         }
     }
 
-    class UniqueNT(value: String) : NonTerminal(value) {
+    /* UniqueNT(value: String) : NonTerminal(value) {
         constructor(nt: NonTerminal) : this(nt.value)
 
         val uuid = Random.nextLong()
@@ -63,7 +50,7 @@ sealed class Symbol {
             result = 31 * result + uuid.hashCode()
             return result
         }
-    }
+    }*/
 }
 
 
