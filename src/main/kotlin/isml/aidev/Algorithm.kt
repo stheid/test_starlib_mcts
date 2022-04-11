@@ -2,7 +2,6 @@ package isml.aidev
 
 import ai.libs.jaicore.graphvisualizer.plugin.graphview.GraphViewPlugin
 import ai.libs.jaicore.graphvisualizer.plugin.nodeinfo.NodeInfoGUIPlugin
-import ai.libs.jaicore.graphvisualizer.plugin.nodeinfo.NodeInfoGenerator
 import ai.libs.jaicore.graphvisualizer.window.AlgorithmVisualizationWindow
 import ai.libs.jaicore.search.algorithms.mdp.mcts.uct.UCTFactory
 import ai.libs.jaicore.search.algorithms.standard.mcts.MCTSPathSearchFactory
@@ -10,7 +9,6 @@ import ai.libs.jaicore.search.model.other.EvaluatedSearchGraphPath
 import ai.libs.jaicore.search.probleminputs.GraphSearchWithPathEvaluationsInput
 import isml.aidev.starlib.PCFGSearchInput
 import isml.aidev.util.Chain
-import isml.aidev.util.ChainLink
 import isml.aidev.util.Unique
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
@@ -82,38 +80,45 @@ class Algorithm(
 }
 
 
-private fun <N, A> ILabeledPath<N, A>.toWord(): String {
-    return this.head.toString()
-
-    // TODO actually the "succ" reference does not work, as we talk about a tree. we need to do it with parent references. this also eliminates the need of a root reference
-
-    var node = root ?: this
+private fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
+    val node = this.root
     val symbol = node.currNT!!
-    val symbols = Chain(listOf<Unique<out Symbol>>(symbol))
-    val nts = hashMapOf<Unique<Symbol.NonTerminal>, ChainLink<Unique<out Symbol>>>(symbol to symbols.linkIterator().asSequence().first())
+    val symbols = Chain(listOf<Any>(symbol))
+    val nts = hashMapOf(symbol to symbols.linkIterator().asSequence().first())
 
-    while (node.succ != null) {
+    // root has been processed, now we look at the production rules and the successor nodes
+    this.arcs.zip(this.nodes.drop(1)).forEach { (rule, succ) ->
+
         // dereference chainlink (GC) and prepare for substitution
-        val linkToSubstitute = nts.remove(node.currNT!!)!!
+        val linkToSubstitute = nts.remove(succ.currNT)!!
+
+        var substChain = Chain(emptyList<Any>())
 
         // for non-ε rules:
-        if (node.substitution!!.isNotEmpty()) {
-            val substChain = Chain<Unique<out Symbol>>(node.substitution!!)
+        if (rule.substitution.isNotEmpty()) {
+            val sub = succ.substitutionNTs.iterator().let { iterator ->
+                return@let rule.substitution.map {
+                    if (it is Symbol.Terminal)
+                        it
+                    else
+                        // if its a non-terminal, take the equivalent Unique<NonTerminal> from the node
+                        iterator.next() }
+            }
+            substChain = Chain(sub)
 
             // store references to chainlinks containing non-terminals
-            substChain.linkIterator().asSequence().filterIsInstance<ChainLink<Unique<Symbol.NonTerminal>>>()
+            substChain.linkIterator().asSequence()
                 .forEach {
-                    nts[it.value] = it
+                    if (it.value is Unique<*> && it.value.value is Symbol.NonTerminal) {
+                        @Suppress("UNCHECKED_CAST")
+                        nts[it.value as Unique<Symbol.NonTerminal>] = it
+                    }
                 }
 
             // substitute chainlink with chain
-            linkToSubstitute.substitute(substChain)
-        } else{
-
-            // todo for epsilon rules we need to substitute the element with a empty chain
         }
 
-        node = node.succ!!
+        linkToSubstitute.substitute(substChain)
     }
 
     // todo there are somehow a lot of nonterminals left. is it again because of the epsilon rules?
