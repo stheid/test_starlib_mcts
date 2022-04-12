@@ -6,7 +6,7 @@ import isml.aidev.Algorithm
 import kotlin.random.Random
 
 class CLI : CliktCommand() {
-    val maxIterations: Int by option(help = "Number of MCTS runs").int().default(50000)
+    val maxIterations: Int by option(help = "Number of MCTS runs").int().default(15000)
     val grammar: String by option(help = "Path to the grammar").default("grammar.yml")
 
     override fun run() {

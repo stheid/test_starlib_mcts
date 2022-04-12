@@ -8,7 +8,7 @@ internal class SymbolsNodeTest {
 
     @Test
     fun createChild() {
-        var node = SymbolsNode(arrayListOf(Unique(grammar.startSymbol)))
+        var node = SymbolsNode(Unique(grammar.startSymbol))
         listOf(
             grammar.prodRules[Symbol.NonTerminal("S")]!![1],
             grammar.prodRules[Symbol.NonTerminal("A")]!![1],
@@ -22,7 +22,7 @@ internal class SymbolsNodeTest {
 
     @Test
     fun createChild2() {
-        var node = SymbolsNode(arrayListOf(Unique(grammar.startSymbol)))
+        var node = SymbolsNode(Unique(grammar.startSymbol))
         listOf(
             grammar.prodRules[Symbol.NonTerminal("S")]!![1],
             grammar.prodRules[Symbol.NonTerminal("A")]!![0],

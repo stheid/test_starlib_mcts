@@ -12,7 +12,7 @@ class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<Symbols
     private val successorGenerator = PCFGSuccGen(grammar.prodRules)
 
     override fun getRootGenerator(): ISingleRootGenerator<SymbolsNode> {
-        return ISingleRootGenerator<SymbolsNode> { SymbolsNode(mutableListOf(Unique(grammar.startSymbol))) }
+        return ISingleRootGenerator<SymbolsNode> { SymbolsNode(Unique(grammar.startSymbol)) }
     }
 
     override fun getSuccessorGenerator(): ISuccessorGenerator<SymbolsNode, RuleEdge> {
