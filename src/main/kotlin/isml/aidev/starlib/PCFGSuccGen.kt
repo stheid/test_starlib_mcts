@@ -20,7 +20,7 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbol
 
         // else create new childs and filter for existing ones
         val children =  node.currNT?.let { nt ->
-            prodRules[nt]!!
+            prodRules[nt.value]!!
                 .map { node.createChild(it) to it }
                 .filter { (child, _) ->
                     nodes.putIfAbsent(child, true) == null

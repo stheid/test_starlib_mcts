@@ -12,7 +12,7 @@ import java.io.File
 sealed class Symbol {
     @SerialName("terminal")
     @Serializable
-    data class Terminal(val value: String) : Symbol (){
+    data class Terminal(val value: String) : Symbol() {
         override fun toString(): String {
             return "term: $value"
         }
@@ -25,32 +25,6 @@ sealed class Symbol {
             return "nt: $value"
         }
     }
-
-    /* UniqueNT(value: String) : NonTerminal(value) {
-        constructor(nt: NonTerminal) : this(nt.value)
-
-        val uuid = Random.nextLong()
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-
-            // if type mixed, we call "NonTerminal" equal method for comparison
-            if (javaClass != other?.javaClass)
-                return super.equals(other)
-
-            other as UniqueNT
-
-            if (value != other.value) return false
-            if (uuid != other.uuid) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = value.hashCode()
-            result = 31 * result + uuid.hashCode()
-            return result
-        }
-    }*/
 }
 
 

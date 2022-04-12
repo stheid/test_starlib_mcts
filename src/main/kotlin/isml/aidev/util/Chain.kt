@@ -56,23 +56,23 @@ class Chain<T>(list: List<T>) : Sequence<T> {
      * will basically clear all references to "this" and nit in references to the start and end of chain.
      * @return return the provided chain object embedded in the larger chain
      */
-    fun substitute(oldLink: ChainLink<T>, newChain: Chain<T>) {
+    fun substitute(oldLink: ChainLink<T>, newChain: Chain<T>?) {
         if (oldLink.chain != this) {
             throw IllegalArgumentException("The provided ChainLink is not part of the chain. Can't substitute")
         }
 
-        // substitute all references to oldLink with references to the new chain
+        // substitute all references to oldLink with references to the new chain, or directly remove the link if chain null
         // either overwrite predecessors succ-pointer or the chain.first pointer
         oldLink.pred
-            ?.apply { succ = newChain.first }
-            ?: run { first = newChain.first }
+            ?.apply { succ = newChain?.first ?: oldLink.succ }
+            ?: run { first = newChain?.first ?: first }
 
         oldLink.succ
-            ?.apply { pred = newChain.last }
-            ?: run { last = newChain.last }
+            ?.apply { pred = newChain?.last ?: oldLink.pred }
+            ?: run { last = newChain?.last ?: last }
 
         // substitute all references to the newChain object with this chain
-        newChain.linkIterator().forEach {
+        newChain?.linkIterator()?.forEach {
             it.chain = this
         }
     }

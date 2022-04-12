@@ -87,22 +87,23 @@ private fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
     val nts = hashMapOf(symbol to symbols.linkIterator().asSequence().first())
 
     // root has been processed, now we look at the production rules and the successor nodes
-    this.arcs.zip(this.nodes.drop(1)).forEach { (rule, succ) ->
+    this.arcs.zip(this.nodes.zipWithNext()).forEach { (rule, nodepair) ->
 
         // dereference chainlink (GC) and prepare for substitution
-        val linkToSubstitute = nts.remove(succ.currNT)!!
+        val linkToSubstitute = nts.remove(nodepair.first.currNT)!!
 
-        var substChain = Chain(emptyList<Any>())
+        var substChain: Chain<Any>? = null
 
         // for non-ε rules:
         if (rule.substitution.isNotEmpty()) {
-            val sub = succ.substitutionNTs.iterator().let { iterator ->
+            val sub = nodepair.second.substitutionNTs.iterator().let { iterator ->
                 return@let rule.substitution.map {
                     if (it is Symbol.Terminal)
                         it
                     else
-                        // if its a non-terminal, take the equivalent Unique<NonTerminal> from the node
-                        iterator.next() }
+                    // if its a non-terminal, take the equivalent Unique<NonTerminal> from the node
+                        iterator.next()
+                }
             }
             substChain = Chain(sub)
 

@@ -1,5 +1,6 @@
 package isml.aidev
 
+import isml.aidev.util.Unique
 import org.junit.jupiter.api.Test
 
 internal class SymbolsNodeTest {
@@ -7,7 +8,7 @@ internal class SymbolsNodeTest {
 
     @Test
     fun createChild() {
-        var node = SymbolsNode(arrayListOf(Symbol.UniqueNT(grammar.startSymbol)))
+        var node = SymbolsNode(arrayListOf(Unique(grammar.startSymbol)))
         listOf(
             grammar.prodRules[Symbol.NonTerminal("S")]!![1],
             grammar.prodRules[Symbol.NonTerminal("A")]!![1],
@@ -17,12 +18,11 @@ internal class SymbolsNodeTest {
         }
 
         println(node.isFinished)
-        println(node.toWord())
     }
 
     @Test
     fun createChild2() {
-        var node = SymbolsNode(arrayListOf(Symbol.UniqueNT(grammar.startSymbol)))
+        var node = SymbolsNode(arrayListOf(Unique(grammar.startSymbol)))
         listOf(
             grammar.prodRules[Symbol.NonTerminal("S")]!![1],
             grammar.prodRules[Symbol.NonTerminal("A")]!![0],
@@ -32,10 +32,5 @@ internal class SymbolsNodeTest {
         }
 
         println(node.isFinished)
-        println(node.toWord())
-    }
-
-    @Test
-    fun toWord() {
     }
 }
