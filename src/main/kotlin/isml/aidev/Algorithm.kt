@@ -122,7 +122,5 @@ private fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
         linkToSubstitute.substitute(substChain)
     }
 
-    // todo there are somehow a lot of nonterminals left. is it again because of the epsilon rules?
     return symbols.filterIsInstance(Symbol.Terminal::class.java).joinToString(separator = "") { it.value }
-
 }

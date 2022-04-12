@@ -4,10 +4,10 @@ import isml.aidev.util.Unique
 import kotlin.random.Random
 
 data class SymbolsNode(
-    val NTs: ArrayList<Unique<Symbol.NonTerminal>>,
+    val NTs: MutableList<Unique<Symbol.NonTerminal>>,
     val substitutionNTs: List<Unique<Symbol.NonTerminal>> = emptyList(),
     val depth: Int = 0,
-    val uuid: Long = Random.nextLong()
+    val uuid: Long = Random.nextLong(),
 ) {
     val currNT = NTs.removeLastOrNull()
     val isFinished: Boolean
@@ -19,7 +19,7 @@ data class SymbolsNode(
 
     fun createChild(rule: RuleEdge): SymbolsNode {
         val sub = rule.substitution.filterIsInstance<Symbol.NonTerminal>().map { Unique(it) }
-        val newNTs = (NTs + sub).shuffled()
-        return SymbolsNode(newNTs as ArrayList<Unique<Symbol.NonTerminal>>,sub, depth + 1)
+        val newNTs = (NTs + sub).shuffled().toMutableList()
+        return SymbolsNode(newNTs, sub, depth + 1)
     }
 }

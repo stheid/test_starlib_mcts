@@ -8,8 +8,7 @@ import org.api4.java.datastructure.graph.implicit.ISuccessorGenerator
 import java.util.concurrent.ConcurrentHashMap
 
 class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<SymbolsNode, RuleEdge> {
-     val adiacenceList = ConcurrentHashMap<SymbolsNode, List<INewNodeDescription<SymbolsNode, RuleEdge>>>()
-
+    val adiacenceList = ConcurrentHashMap<SymbolsNode, List<INewNodeDescription<SymbolsNode, RuleEdge>>>()
 
     override fun generateSuccessors(node: SymbolsNode): List<INewNodeDescription<SymbolsNode, RuleEdge>> {
         if (adiacenceList.containsKey(node)) {
@@ -38,7 +37,6 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbol
                 }
         } ?: emptyList()
 
-        adiacenceList[node] = children
-        return children
+        return children.also { adiacenceList[node] = it }
     }
 }

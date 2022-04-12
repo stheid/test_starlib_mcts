@@ -18,7 +18,7 @@ fun DoubleArray.cumsum(): DoubleArray {
 fun <T> List<T>.choice(p: DoubleArray): T {
     val rand = Random.nextDouble()
     val pcumsum = p.cumsum()
-    // cummulative sum does not neccesariy add up to one because of float arithmetic.
+    // cumulative sum does not necessary add up to one because of float arithmetic.
     pcumsum[pcumsum.size-1] = 1.0
     return this.withIndex().first { pcumsum.elementAt(it.index) >= rand }.value
 }
