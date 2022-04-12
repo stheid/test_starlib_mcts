@@ -88,24 +88,21 @@ private fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
 
     // root has been processed, now we look at the production rules and the successor nodes
     this.arcs.zip(this.nodes.zipWithNext()).forEach { (rule, nodepair) ->
-
         // dereference chainlink (GC) and prepare for substitution
-        val linkToSubstitute = nts.remove(nodepair.first.currNT)!!
+        val linkToSubstitute = nts.remove(nodepair.first.currNT!!)!!
 
-        var substChain: Chain<Any>? = null
-
-        // for non-ε rules:
-        if (rule.substitution.isNotEmpty()) {
+        if (rule.substitution.isEmpty()) {
+            // for ε-rules just remove the reference
+            linkToSubstitute.substitute(null)
+        } else {
+            // for non-ε rules:
             val sub = nodepair.second.substitutionNTs.iterator().let { iterator ->
                 return@let rule.substitution.map {
-                    if (it is Symbol.Terminal)
-                        it
-                    else
-                    // if its a non-terminal, take the equivalent Unique<NonTerminal> from the node
-                        iterator.next()
+                    // if it's a non-terminal, take the equivalent Unique<NonTerminal> from the node
+                    it as? Symbol.Terminal ?: iterator.next()
                 }
             }
-            substChain = Chain(sub)
+            val substChain = Chain(sub)
 
             // store references to chainlinks containing non-terminals
             substChain.linkIterator().asSequence()
@@ -117,9 +114,8 @@ private fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
                 }
 
             // substitute chainlink with chain
+            linkToSubstitute.substitute(substChain)
         }
-
-        linkToSubstitute.substitute(substChain)
     }
 
     return symbols.filterIsInstance(Symbol.Terminal::class.java).joinToString(separator = "") { it.value }
