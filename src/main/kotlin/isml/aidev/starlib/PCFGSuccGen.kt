@@ -8,8 +8,7 @@ import org.api4.java.datastructure.graph.implicit.ISuccessorGenerator
 import java.util.concurrent.ConcurrentHashMap
 
 class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<SymbolsNode, RuleEdge> {
-    val nodes = ConcurrentHashMap<SymbolsNode, Boolean>()
-    val adiacenceList = ConcurrentHashMap<SymbolsNode, List<INewNodeDescription<SymbolsNode, RuleEdge>>>()
+     val adiacenceList = ConcurrentHashMap<SymbolsNode, List<INewNodeDescription<SymbolsNode, RuleEdge>>>()
 
 
     override fun generateSuccessors(node: SymbolsNode): List<INewNodeDescription<SymbolsNode, RuleEdge>> {
@@ -19,12 +18,9 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbol
         }
 
         // else create new childs and filter for existing ones
-        val children =  node.currNT?.let { nt ->
+        val children = node.currNT?.let { nt ->
             prodRules[nt.value]!!
                 .map { node.createChild(it) to it }
-                .filter { (child, _) ->
-                    nodes.putIfAbsent(child, true) == null
-                }
                 .map { (child, rule) ->
                     object : INewNodeDescription<SymbolsNode, RuleEdge> {
                         override fun getFrom(): SymbolsNode {
@@ -42,8 +38,6 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbol
                 }
         } ?: emptyList()
 
-        // todo: handle what happens if node has no children, but is not a leaf
-        // -> can happen because of filtering
         adiacenceList[node] = children
         return children
     }
