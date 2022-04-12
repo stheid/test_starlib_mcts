@@ -14,11 +14,9 @@ data class SymbolsNode(
     val remainingNTs: Set<Unique<Symbol.NonTerminal>>
         get() {
             // recursively calculate the remaining Nonterminals from the parents
-            val _remainingNTs = substitutionNTs.toMutableSet().apply { remove(currNT) }
-            parent?.let { _parent ->
-                _parent.remainingNTs.let { _remainingNTs.addAll(it) }
-                _parent.currNT?.let { _remainingNTs.remove(it) }
-            }
+            val _remainingNTs = parent?.remainingNTs?.toMutableSet()?: mutableSetOf()
+            _remainingNTs.addAll(substitutionNTs)
+            _remainingNTs.remove(currNT)
             return _remainingNTs
         }
 
