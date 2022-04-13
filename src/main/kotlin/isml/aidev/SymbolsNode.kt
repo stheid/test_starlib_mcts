@@ -1,23 +1,26 @@
 package isml.aidev
 
 import isml.aidev.util.Unique
-import kotlin.random.Random
 
-data class SymbolsNode(
+class SymbolsNode(
     val currNT: Unique<Symbol.NonTerminal>?,
-    //val NTs: MutableList<Unique<Symbol.NonTerminal>>,
     val substitutionNTs: List<Unique<Symbol.NonTerminal>> = emptyList(),
-    val parent: SymbolsNode? = null,
+    private val parent: SymbolsNode? = null,
     val depth: Int = 0,
-    val uuid: Long = Random.nextLong(),
 ) {
+    private var _remainingNTs: Set<Unique<Symbol.NonTerminal>>? = null
     val remainingNTs: Set<Unique<Symbol.NonTerminal>>
         get() {
-            // recursively calculate the remaining Nonterminals from the parents
-            val _remainingNTs = parent?.remainingNTs?.toMutableSet()?: mutableSetOf()
-            _remainingNTs.addAll(substitutionNTs)
-            _remainingNTs.remove(currNT)
-            return _remainingNTs
+            if (_remainingNTs != null)
+                return _remainingNTs!!
+            return run {
+                // recursively calculate the remaining Nonterminals from the parents
+                val nts = parent?.remainingNTs?.toMutableSet() ?: mutableSetOf()
+                nts.apply {
+                    addAll(substitutionNTs)
+                    remove(currNT)
+                }
+            }.apply { _remainingNTs = this }
         }
 
     val isFinished: Boolean
@@ -29,7 +32,7 @@ data class SymbolsNode(
 
     fun createChild(rule: RuleEdge): SymbolsNode {
         val sub = rule.substitution.filterIsInstance<Symbol.NonTerminal>().map { Unique(it) }.toList()
-        val nextNT = (remainingNTs + sub).shuffled().toMutableList().removeFirstOrNull()
+        val nextNT = (remainingNTs.toList() + sub).randomOrNull()
         return SymbolsNode(nextNT, sub, this, depth + 1)
     }
 }

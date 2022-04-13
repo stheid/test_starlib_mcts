@@ -10,10 +10,10 @@ class CLI : CliktCommand() {
     val grammar: String by option(help = "Path to the grammar").default("grammar.yml")
 
     override fun run() {
-        val algo = Algorithm(maxIterations, grammar, 20)
+        val algo = Algorithm(maxIterations, grammar, 10)
         repeat(maxIterations) {
             println("input: ${algo.createInput().decodeToString()}")
-            algo.observe(Random.nextDouble(0.1, 1.0))
+            algo.observe(Random.nextDouble(0.0, 1.0))
         }
         algo.join()
     }
