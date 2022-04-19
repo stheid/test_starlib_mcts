@@ -79,7 +79,6 @@ class Algorithm(
     }
 }
 
-
 private fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
     val node = this.root
     val symbol = node.currNT!!
@@ -87,7 +86,7 @@ private fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
     val nts = hashMapOf(symbol to symbols.linkIterator().asSequence().first())
 
     // root has been processed, now we look at the production rules and the successor nodes
-    this.arcs.zip(this.nodes.zipWithNext()).forEach { (rule, nodepair) ->
+    arcs.zip(nodes.zipWithNext()).forEach { (rule, nodepair) ->
         // dereference chainlink (GC) and prepare for substitution
         val linkToSubstitute = nts.remove(nodepair.first.currNT!!)!!
 
@@ -96,8 +95,11 @@ private fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
             linkToSubstitute.substitute(null)
         } else {
             // for non-ε rules:
+            // create the substitution by melding the unique non-terminals from the node and adding the missing
+            // terminals from the rule
+            // e.g.  substitutionNTs: B3,D4,D6 (unique NTs); rule.substitution: aBcDDc (nts and terminals)
             val sub = nodepair.second.substitutionNTs.iterator().let { iterator ->
-                return@let rule.substitution.map {
+                rule.substitution.map {
                     // if it's a non-terminal, take the equivalent Unique<NonTerminal> from the node
                     it as? Symbol.Terminal ?: iterator.next()
                 }

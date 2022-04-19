@@ -11,16 +11,17 @@ class SymbolsNode(
     private var _remainingNTs: Set<Unique<Symbol.NonTerminal>>? = null
     val remainingNTs: Set<Unique<Symbol.NonTerminal>>
         get() {
-            if (_remainingNTs != null)
-                return _remainingNTs!!
-            return run {
-                // recursively calculate the remaining Nonterminals from the parents
-                val nts = parent?.remainingNTs?.toMutableSet() ?: mutableSetOf()
-                nts.apply {
-                    addAll(substitutionNTs)
-                    remove(currNT)
-                }
-            }.apply { _remainingNTs = this }
+            // recursively calculate the remaining Nonterminals from the parents
+            return _remainingNTs
+            // get the parents nts or create an empty set
+                ?: (parent?.remainingNTs?.toMutableSet() ?: mutableSetOf())
+                    .apply {
+                        addAll(substitutionNTs)
+                        remove(currNT)
+
+                        // storing the result in the field
+                        _remainingNTs = this
+                    }
         }
 
     val isFinished: Boolean

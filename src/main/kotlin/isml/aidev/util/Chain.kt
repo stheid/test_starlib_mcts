@@ -1,8 +1,8 @@
 package isml.aidev.util
 
 class Chain<T>(list: List<T>) : Sequence<T> {
-    var first: ChainLink<T>
-    var last: ChainLink<T>
+    var first: ChainLink<T>?
+    var last: ChainLink<T>?
 
     init {
         // create a link for each individual and then link them
@@ -65,11 +65,11 @@ class Chain<T>(list: List<T>) : Sequence<T> {
         // either overwrite predecessors succ-pointer or the chain.first pointer
         oldLink.pred
             ?.apply { succ = newChain?.first ?: oldLink.succ }
-            ?: run { first = newChain?.first ?: first }
+            ?: run { first = newChain?.first ?: oldLink.succ }
 
         oldLink.succ
-            ?.apply { pred = newChain?.last ?: oldLink.pred }
-            ?: run { last = newChain?.last ?: last }
+            ?.also { it.pred = newChain?.last ?: oldLink.pred }
+            ?: run { last = newChain?.last ?: oldLink.pred }
 
         // substitute all references to the newChain object with this chain
         newChain?.linkIterator()?.forEach {
