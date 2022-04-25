@@ -1,4 +1,4 @@
-prodRules_:
+prodRules:
   S:
     - substitution:
         - type: nonterminal

@@ -24,8 +24,8 @@ class Algorithm(
 ) {
     private val inputChannel = Channel<ByteArray>()
     private val covChannel = Channel<Double>()
-    private lateinit var solution: EvaluatedSearchGraphPath<SymbolsNode, RuleEdge, Double>
     private var worker: Thread
+    private lateinit var solution: EvaluatedSearchGraphPath<SymbolsNode, RuleEdge, Double>
 
     init {
         val rawInput = PCFGSearchInput(
@@ -47,7 +47,7 @@ class Algorithm(
             val stop_extending = symbols.depth > maxPathLength
 
             rules.toList().choice(
-                p = rules.map { it.weight * if (stop_extending && it.is_extending) 1e-10 else 1.0 }.toDoubleArray()
+                p = rules.map { it.weight * if (stop_extending && it.isExtending) 1e-10 else 1.0 }.toDoubleArray()
                     .normalize()
             )
         }

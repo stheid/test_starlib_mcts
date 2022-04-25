@@ -1,7 +1,6 @@
-prodRules_:
+prodRules:
   S:
-    - is_extending: true
-      substitution:
+    - substitution:
         - type: nonterminal
           value: A
         - type: nonterminal
@@ -9,8 +8,7 @@ prodRules_:
         - type: nonterminal
           value: A
       weight: 7
-    - is_extending: true
-      substitution:
+    - substitution:
         - type: nonterminal
           value: A
         - type: terminal
@@ -19,17 +17,14 @@ prodRules_:
           value: A
       weight: 1
   A:
-    - is_extending: false
-      substitution: []
+    - substitution: []
       weight: 1
-    - is_extending: false
-      substitution:
+    - substitution:
         - type: terminal
           value: a
       weight: 1
   B:
-    - is_extending: false
-      substitution:
+    - substitution:
         - type: terminal
           value: b
       weight: 1

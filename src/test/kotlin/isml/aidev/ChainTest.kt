@@ -9,9 +9,21 @@ internal class ChainTest {
     val short = listOf(1, 2, 3)
 
     @Test
-    fun test_basic_constructor() {
+    fun test_length1() {
         val chain = Chain(long)
         assert(long.size == chain.toList().size)
+    }
+
+    @Test
+    fun test_length2() {
+        val chain = Chain(long)
+        assert(long.size == chain.iterator().asSequence().toList().size)
+    }
+
+    @Test
+    fun test_length3() {
+        val chain = Chain(long)
+        assert(long.size == chain.linkIterator().asSequence().toList().size)
     }
 
     @Test

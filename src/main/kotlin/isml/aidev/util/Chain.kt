@@ -18,36 +18,27 @@ class Chain<T>(list: List<T>) : Sequence<T> {
             }
     }
 
-    override fun iterator(): Iterator<T> {
-        return object : Iterator<T> {
-            var node: ChainLink<T>? = first
+    override fun iterator() = object : Iterator<T> {
+        var node = first
 
-            override fun hasNext(): Boolean {
-                return node != null
-            }
+        override fun hasNext() =
+            node != null
 
-            override fun next(): T {
-                val curNode = node!!
-                node = node!!.succ
-                return curNode.value
-            }
-        }
+        override fun next() =
+            // return current and update reference
+            node?.apply { node = succ }!!.value
+
     }
 
-    fun linkIterator(): Iterator<ChainLink<T>> {
-        return object : Iterator<ChainLink<T>> {
-            var node: ChainLink<T>? = first
+    fun linkIterator() = object : Iterator<ChainLink<T>> {
+        var node = first
 
-            override fun hasNext(): Boolean {
-                return node != null
-            }
+        override fun hasNext() =
+            node != null
 
-            override fun next(): ChainLink<T> {
-                val curNode = node!!
-                node = node!!.succ
-                return curNode
-            }
-        }
+        override fun next() =
+            // return current and update reference
+            node?.apply { node = succ }!!
     }
 
     /**
@@ -77,7 +68,6 @@ class Chain<T>(list: List<T>) : Sequence<T> {
         }
     }
 
-    override fun toString(): String {
-        return this.iterator().asSequence().joinToString(separator = " <-> ")
-    }
+    override fun toString() =
+        iterator().asSequence().joinToString(separator = " <-> ")
 }

@@ -3,8 +3,8 @@ package isml.aidev
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class RuleEdge(val substitution: List<Symbol>, val is_extending: Boolean, val weight: Double = 1.0) {
-    override fun toString(): String {
-        return " -> $substitution"
-    }
+class RuleEdge(val substitution: List<Symbol>, val weight: Float = 1.0f) {
+    override fun toString() = " -> $substitution"
+
+    val isExtending get() = substitution.filterIsInstance<Symbol.NonTerminal>().size > 1
 }

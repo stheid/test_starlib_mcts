@@ -9,28 +9,20 @@ class SymbolsNode(
     private val parent: SymbolsNode? = null,
     val depth: Int = 0,
 ) {
-    private var _remainingNTs: Set<Symbol.NonTerminal>? = null
-    val remainingNTs: Set<Symbol.NonTerminal>
-        get() {
-            // return cached instance if possible
-            return _remainingNTs
-            // else
-            // recursively calculate the remaining non-terminals from the parents
-            // get the parents nts or create an empty set
-                ?: (parent?.remainingNTs?.toMutableSet() ?: mutableSetOf())
-                    .apply {
-                        addAll(substitutionNTs)
-                        remove(currNT)
-
-                        // storing the result in the field
-                        _remainingNTs = this
-                    }
-        }
-
-    val isFinished: Boolean
+    val isFinished
         get() = currNT == null
 
-    override fun toString(): String =
+    val remainingNTs: Set<Symbol.NonTerminal> by lazy {
+        // recursively calculate the remaining non-terminals from the parents
+        // get the parents nts or create an empty set
+        (parent?.remainingNTs?.toMutableSet() ?: mutableSetOf())
+            .apply {
+                addAll(substitutionNTs)
+                remove(currNT)
+            }
+    }
+
+    override fun toString() =
         "SymbolNode(currNT=${currNT}, depth=${depth})"
 
     fun createChild(rule: RuleEdge): SymbolsNode {
