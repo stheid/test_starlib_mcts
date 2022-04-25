@@ -9,11 +9,9 @@ import org.api4.java.datastructure.graph.implicit.IGraphGenerator
 
 
 class PCFGSearchInput(private val grammar: Grammar) : IPathSearchInput<SymbolsNode, RuleEdge> {
-    override fun getGraphGenerator(): IGraphGenerator<SymbolsNode, RuleEdge> {
-        return PCFGGraphGenerator(grammar)
-    }
+    override fun getGraphGenerator(): IGraphGenerator<SymbolsNode, RuleEdge> =
+        PCFGGraphGenerator(grammar)
 
-    override fun getGoalTester(): IPathGoalTester<SymbolsNode, RuleEdge> {
-        return IPathGoalTester<SymbolsNode, RuleEdge> { it.head.isFinished }
-    }
+    override fun getGoalTester(): IPathGoalTester<SymbolsNode, RuleEdge> =
+        IPathGoalTester<SymbolsNode, RuleEdge> { it.head.isFinished }
 }

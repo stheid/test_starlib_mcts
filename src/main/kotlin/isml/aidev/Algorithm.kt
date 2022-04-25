@@ -9,7 +9,6 @@ import ai.libs.jaicore.search.model.other.EvaluatedSearchGraphPath
 import ai.libs.jaicore.search.probleminputs.GraphSearchWithPathEvaluationsInput
 import isml.aidev.starlib.PCFGSearchInput
 import isml.aidev.util.Chain
-import isml.aidev.util.Unique
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.api4.java.ai.graphsearch.problem.pathsearch.pathevaluation.IPathEvaluator
@@ -82,7 +81,7 @@ class Algorithm(
 private fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
     val node = this.root
     val symbol = node.currNT!!
-    val symbols = Chain(listOf<Any>(symbol))
+    val symbols = Chain(listOf<Symbol>(symbol))
     val nts = hashMapOf(symbol to symbols.linkIterator().asSequence().first())
 
     // root has been processed, now we look at the production rules and the successor nodes
@@ -109,10 +108,8 @@ private fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
             // store references to chainlinks containing non-terminals
             substChain.linkIterator().asSequence()
                 .forEach {
-                    if (it.value is Unique<*> && it.value.value is Symbol.NonTerminal) {
-                        @Suppress("UNCHECKED_CAST")
-                        nts[it.value as Unique<Symbol.NonTerminal>] = it
-                    }
+                    if (it.value is Symbol.NonTerminal)
+                        nts[it.value] = it
                 }
 
             // substitute chainlink with chain

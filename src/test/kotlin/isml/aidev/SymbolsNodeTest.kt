@@ -1,6 +1,5 @@
 package isml.aidev
 
-import isml.aidev.util.Unique
 import org.junit.jupiter.api.Test
 
 internal class SymbolsNodeTest {
@@ -8,7 +7,7 @@ internal class SymbolsNodeTest {
 
     @Test
     fun test1_remainingNTs(){
-        var node = SymbolsNode(Unique(Symbol.NonTerminal("S")))
+        var node = SymbolsNode(Symbol.NonTerminal("S").copy())
         listOf(
             RuleEdge(
                 listOf(
@@ -22,7 +21,7 @@ internal class SymbolsNodeTest {
 
     @Test
     fun test2_remainingNTs(){
-        var node = SymbolsNode(Unique(Symbol.NonTerminal("S")))
+        var node = SymbolsNode(Symbol.NonTerminal("S").copy())
         listOf(
             RuleEdge(
                 listOf(
@@ -43,32 +42,5 @@ internal class SymbolsNodeTest {
             node = node.createChild(it)
         }
         assert(node.remainingNTs.size == 3)
-    }
-    @Test
-    fun createChild() {
-        var node = SymbolsNode(Unique(grammar.startSymbol))
-        listOf(
-            grammar.prodRules[Symbol.NonTerminal("S")]!![1],
-            grammar.prodRules[Symbol.NonTerminal("A")]!![1],
-            grammar.prodRules[Symbol.NonTerminal("A")]!![1],
-        ).forEach{
-            node = node.createChild(it)
-        }
-
-        println(node.isFinished)
-    }
-
-    @Test
-    fun createChild2() {
-        var node = SymbolsNode(Unique(grammar.startSymbol))
-        listOf(
-            grammar.prodRules[Symbol.NonTerminal("S")]!![1],
-            grammar.prodRules[Symbol.NonTerminal("A")]!![0],
-            grammar.prodRules[Symbol.NonTerminal("A")]!![0],
-        ).forEach{
-            node = node.createChild(it)
-        }
-
-        println(node.isFinished)
     }
 }

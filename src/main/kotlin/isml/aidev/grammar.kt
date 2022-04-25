@@ -7,44 +7,40 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.io.File
 
-
 @Serializable
 sealed class Symbol {
     @SerialName("terminal")
     @Serializable
     data class Terminal(val value: String) : Symbol() {
-        override fun toString(): String {
-            return "term: $value"
-        }
+        override fun toString(): String =
+            "term: $value"
     }
 
     @SerialName("nonterminal")
     @Serializable
-    data class NonTerminal(val value: String) : Symbol() {
-        override fun toString(): String {
-            return "nt: $value"
-        }
+    /**
+     * Must not be a data class as we need to uniquely identify non-terminals by their object reference.
+     * For a non-unique comparison we can use the Non-Terminals internal string.
+     */
+    class NonTerminal(val value: String) : Symbol() {
+        override fun toString(): String =
+            "nt: $value"
+
+        fun copy(): NonTerminal =
+            NonTerminal(value)
     }
 }
 
+typealias ProdRules = Map<String, List<RuleEdge>>
 
 @Serializable
 data class Grammar(
     val startSymbol: Symbol.NonTerminal,
-    private val prodRules_: Map<String, List<RuleEdge>>,
+    val prodRules_: ProdRules,
 ) {
     companion object {
-        fun fromFile(path: String): Grammar {
-            return Yaml(configuration = YamlConfiguration(polymorphismStyle = PolymorphismStyle.Property)).decodeFromString(
-                serializer(), File(path).bufferedReader().readText()
-            )
-        }
+        fun fromFile(path: String): Grammar =
+            Yaml(configuration = YamlConfiguration(polymorphismStyle = PolymorphismStyle.Property))
+                .decodeFromString(serializer(), File(path).bufferedReader().readText())
     }
-
-    val prodRules
-        get() = prodRules_.map { Symbol.NonTerminal(it.key) to it.value }.associate { it }
 }
-
-typealias ProdRules = Map<Symbol.NonTerminal, List<RuleEdge>>
-
-
