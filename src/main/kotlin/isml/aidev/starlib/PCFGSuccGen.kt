@@ -9,7 +9,7 @@ import org.api4.java.datastructure.graph.implicit.ISuccessorGenerator
 class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<SymbolsNode, RuleEdge> {
     private val cache = HashMap<SymbolsNode, List<INewNodeDescription<SymbolsNode, RuleEdge>>>()
 
-    override fun generateSuccessors(node: SymbolsNode): List<INewNodeDescription<SymbolsNode, RuleEdge>> =
+    override fun generateSuccessors(node: SymbolsNode) =
         cache.computeIfAbsent(node) {
             // else create new children and filter for existing ones
             node.currNT?.run {
