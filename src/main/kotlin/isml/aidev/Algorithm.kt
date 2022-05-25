@@ -14,7 +14,7 @@ import kotlinx.coroutines.runBlocking
 import org.api4.java.ai.graphsearch.problem.pathsearch.pathevaluation.IPathEvaluator
 import org.api4.java.datastructure.graph.ILabeledPath
 import kotlin.concurrent.thread
-
+import kotlin.system.exitProcess
 
 class Algorithm(
     maxIterations: Int = 100,
@@ -62,10 +62,20 @@ class Algorithm(
 
         // start mcts call in background
         worker = thread { solution = mcts.call() }
+
     }
 
-    fun createInput() =
-        runBlocking { inputChannel.receive() }
+    fun createInput(): ByteArray {
+        // if available memory is below .5% of the total memory
+        val thresh = Runtime.getRuntime().maxMemory() / 200
+        if (Runtime.getRuntime().freeMemory() < thresh && Runtime.getRuntime().run { totalMemory() == maxMemory() }) {
+            println("MCTS fuzzer has been killed because available Memory is less than ${
+                thresh / 1000000
+            } MB")
+            exitProcess(1)
+        }
+        return runBlocking { inputChannel.receive() }
+    }
 
     fun observe(reward: Double) =
         runBlocking { covChannel.send(reward) }
