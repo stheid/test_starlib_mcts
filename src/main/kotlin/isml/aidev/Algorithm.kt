@@ -2,17 +2,16 @@ package isml.aidev
 
 import ai.libs.jaicore.graphvisualizer.plugin.graphview.GraphViewPlugin
 import ai.libs.jaicore.graphvisualizer.plugin.nodeinfo.NodeInfoGUIPlugin
+import ai.libs.jaicore.graphvisualizer.plugin.nodeinfo.NodeInfoGenerator
 import ai.libs.jaicore.graphvisualizer.window.AlgorithmVisualizationWindow
 import ai.libs.jaicore.search.algorithms.mdp.mcts.uct.UCTFactory
 import ai.libs.jaicore.search.algorithms.standard.mcts.MCTSPathSearchFactory
 import ai.libs.jaicore.search.model.other.EvaluatedSearchGraphPath
 import ai.libs.jaicore.search.probleminputs.GraphSearchWithPathEvaluationsInput
 import isml.aidev.starlib.PCFGSearchInput
-import isml.aidev.util.Chain
+import isml.aidev.util.toWord
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
-import org.api4.java.ai.graphsearch.problem.pathsearch.pathevaluation.IPathEvaluator
-import org.api4.java.datastructure.graph.ILabeledPath
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
@@ -34,20 +33,20 @@ class Algorithm(
         )
 
         // create a version with costs
-        val input = GraphSearchWithPathEvaluationsInput(rawInput, IPathEvaluator {
+        val input = GraphSearchWithPathEvaluationsInput(rawInput) {
             runBlocking {
                 inputChannel.send(it.toWord().toByteArray())
                 covChannel.receive()
             }
-        })
+        }
 
         // create MCTS algorithm
         val factory = MCTSPathSearchFactory<SymbolsNode, RuleEdge>()
         val uct = UCTFactory<SymbolsNode, RuleEdge>().withDefaultPolicy { symbols, rules ->
-            val stop_extending = symbols.depth > maxPathLength
+            val stopExtending = symbols.depth > maxPathLength
 
             rules.toList().choice(
-                p = rules.map { it.weight * if (stop_extending && it.isExtending) 1e-10 else 1.0 }.toDoubleArray()
+                p = rules.map { it.weight * if (stopExtending && it.isExtending) 1e-10 else 1.0 }.toDoubleArray()
                     .normalize()
             )
         }
@@ -57,21 +56,25 @@ class Algorithm(
         if (!headless) {
             val window = AlgorithmVisualizationWindow(mcts)
             window.withMainPlugin(GraphViewPlugin())
-            window.withPlugin(NodeInfoGUIPlugin { it.toString() })
+            window.withPlugin(NodeInfoGUIPlugin(object : NodeInfoGenerator<SymbolsNode> {
+                override fun getName() = ""
+                override fun generateInfoForNode(node: SymbolsNode?) = node.toString()
+            }))
         }
 
         // start mcts call in background
         worker = thread { solution = mcts.call() }
-
     }
 
     fun createInput(): ByteArray {
         // if available memory is below .5% of the total memory
         val thresh = Runtime.getRuntime().maxMemory() / 200
         if (Runtime.getRuntime().freeMemory() < thresh && Runtime.getRuntime().run { totalMemory() == maxMemory() }) {
-            println("MCTS fuzzer has been killed because available Memory is less than ${
-                thresh / 1000000
-            } MB")
+            println(
+                "MCTS fuzzer has been killed because available Memory is less than ${
+                    thresh / 1000000
+                } MB"
+            )
             exitProcess(1)
         }
         return runBlocking { inputChannel.receive() }
@@ -86,46 +89,4 @@ class Algorithm(
         println(solution.toWord())
         println(solution.score)
     }
-}
-
-private fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
-    val node = this.root
-    val symbol = node.currNT!!
-    val symbols = Chain(listOf<Symbol>(symbol))
-    val nts = hashMapOf(symbol to symbols.linkIterator().asSequence().first())
-
-    // root has been processed, now we look at the production rules and the successor nodes
-    arcs.zip(nodes.zipWithNext()).forEach { (rule, nodepair) ->
-        // dereference chainlink (GC) and prepare for substitution
-        val linkToSubstitute = nts.remove(nodepair.first.currNT!!)!!
-
-        if (rule.substitution.isEmpty()) {
-            // for ε-rules just remove the reference
-            linkToSubstitute.substitute(null)
-        } else {
-            // for non-ε rules:
-            // create the substitution by melding the unique non-terminals from the node and adding the missing
-            // terminals from the rule
-            // e.g.  substitutionNTs: B3,D4,D6 (unique NTs); rule.substitution: aBcDDc (nts and terminals)
-            val sub = nodepair.second.substitutionNTs.iterator().let { iterator ->
-                rule.substitution.map {
-                    // if it's a non-terminal, take the equivalent Unique<NonTerminal> from the node
-                    it as? Symbol.Terminal ?: iterator.next()
-                }
-            }
-            val substChain = Chain(sub)
-
-            // store references to chainlinks containing non-terminals
-            substChain.linkIterator().asSequence()
-                .forEach {
-                    if (it.value is Symbol.NonTerminal)
-                        nts[it.value] = it
-                }
-
-            // substitute chainlink with chain
-            linkToSubstitute.substitute(substChain)
-        }
-    }
-
-    return symbols.filterIsInstance(Symbol.Terminal::class.java).joinToString(separator = "") { it.value }
 }

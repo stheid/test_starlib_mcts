@@ -1,37 +1,10 @@
-prodRules_:
-  S:
-    - is_extending: true
-      substitution:
-        - type: nonterminal
-          value: A
-        - type: nonterminal
-          value: B
-        - type: nonterminal
-          value: A
-      weight: 8
-    - is_extending: true
-      substitution:
-        - type: nonterminal
-          value: A
-        - type: terminal
-          value: s
-        - type: nonterminal
-          value: A
-      weight: 1
-  A:
-    - is_extending: false
-      substitution: []
-      weight: 1
-    - is_extending: false
-      substitution:
-        - type: terminal
-          value: a
-      weight: 1
-  B:
-    - is_extending: false
-      substitution:
-        - type: terminal
-          value: b
-      weight: 1
-startSymbol:
-  value: S
+S:
+  'A B A': 8
+  'A "s" A': 1
+
+A:
+  - '"a"'
+  - ''
+
+B:
+  - '"b"'

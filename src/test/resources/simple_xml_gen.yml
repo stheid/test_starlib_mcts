@@ -1,0 +1,37 @@
+# startword
+elem:
+  - 'makeAlphaString attributes maybeChildren'
+# geom(2) - constant 1
+attributes:
+  - '_1_from2Geo'
+
+maybeChildren:
+#  - 'boolTrue children'
+  - 'boolFalse maybeText'
+
+maybeText:
+#  - 'boolTrue text'
+  - 'boolFalse maybeCdata'
+
+maybeCdata:
+#  - 'boolTrue cdata'
+  - 'boolFalse'
+
+# from scipy.stats import geom; geom(1/10).pmf(i)
+makeAlphaString:
+  ## mean 10.0
+  - '_1_from10Geo byte'
+
+byte:
+  - '"\xFF"'
+#  - '"\x00" . "\xFF"'
+
+boolFalse:
+  - '"\x00"'
+
+_1_from2Geo:
+  - '"\x9a\x0a\x52\x88\x60\x5d\xd3\x9c"'
+
+
+_1_from10Geo:
+  - '"\x65\xd0\x4a\xf0\xbf\xf5\xe1\xab"'

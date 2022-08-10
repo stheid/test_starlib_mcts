@@ -1,8 +1,5 @@
 package isml.aidev
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 class RuleEdge(val substitution: List<Symbol>, val weight: Float = 1.0f) {
     override fun toString() = " -> $substitution"
 
