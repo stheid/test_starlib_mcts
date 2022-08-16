@@ -23,21 +23,24 @@ sealed class Symbol(open val value: String) {
     }
 }
 
-typealias ProdRules = Map<String, List<RuleEdge>>
+typealias ProdRules = Map<String, Map<String, List<RuleEdge>>>
 
 data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
     companion object {
         fun fromFile(path: String): Grammar {
             val root = Yaml.default.parseToYamlNode(File(path).bufferedReader().readText())
-            val grammar = root.yamlMap.entries.entries.associate { (key, value) ->
-                key.content to
-                        value
-                            .parseRule()
-                            // we need to flatmap because there are range like rules (byte-> \x00 .. \xff) that will be expanded into multiple rules
-                            .flatMap { (nt, weight) ->
-                                nt.toRuleEdges(weight)
-                            }
-            }.simplify()
+            val grammar = root.yamlMap.entries.entries.associate { (NT, substitution) ->
+                NT.content to
+                        listOf("true").associate {
+                            it to
+                                    substitution
+                                        .parseRule()
+                                        // we need to flatmap because there are range like rules (byte-> \x00 .. \xff) that will be expanded into multiple rules
+                                        .flatMap { (nt, weight) ->
+                                            nt.toRuleEdges(weight)
+                                        }
+                        }
+            }//.simplify()
 
             return Grammar(NonTerminal(grammar.entries.first().key), grammar)
         }
@@ -61,7 +64,10 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
     }
 
     private fun sampleRule(nt: NonTerminal): RuleEdge {
-        return (prodRules[nt.value] ?: error("Did not find NT ${nt.value}")).toList().let { rules ->
+        val ruleAlternatives = prodRules[nt.value] ?: error("Did not find NT ${nt.value}")
+        val trueCondition = ruleAlternatives.keys.filter { true }.singleOrNull()
+            ?: error("more or less than one production rule with a fulfilled condition. (${nt.value}")
+        return ruleAlternatives[trueCondition]!!.toList().let { rules ->
             rules.choice(
                 p = rules.map { it.weight.toDouble() }.toDoubleArray().normalize()
             )
@@ -73,7 +79,7 @@ private fun Map<String, List<RuleEdge>>.simplify(): Map<String, List<RuleEdge>> 
     // find simple NT->[[term+]] rules, so basically non-terminals that are only part of one single rule that is made up entirely by terminals
     val groups = this.entries
         .groupBy { (_, value) -> value.size == 1 && value[0].substitution.all { it is Terminal } }.entries
-        .associate { it.key to it.value.associate { (k,v) -> k to v } }
+        .associate { it.key to it.value.associate { (k, v) -> k to v } }
     val complex = groups[false] ?: emptyMap()
     val simple = groups[true] ?: emptyMap()
 
