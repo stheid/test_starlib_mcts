@@ -6,6 +6,7 @@ import isml.aidev.Symbol.NonTerminal
 import isml.aidev.Symbol.Terminal
 import isml.aidev.util.toWord
 import java.io.File
+import javax.naming.spi.ObjectFactory
 
 sealed class Symbol(open val value: String) {
     data class Terminal(override val value: String) : Symbol(value) {
@@ -38,8 +39,13 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
                                 nt.toRuleEdges(weight)
                             }
             }.simplify()
+//            }.simplify()
 
             return Grammar(NonTerminal(grammar.entries.first().key), grammar)
+        }
+
+        fun fromResource(path: String): Grammar {
+           return fromFile(this::class.java.classLoader.getResource(path)?.path!!)
         }
     }
 
