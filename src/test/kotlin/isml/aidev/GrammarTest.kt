@@ -18,7 +18,7 @@ class GrammarTest {
 
     @Test
     fun sample() {
-        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("json_simple_gram.yml")?.path!!)
+        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_localvar.yaml")?.path!!)
         val byteseq = grammar.sample()
         println(byteseq)
 

@@ -61,7 +61,7 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
     }
 
     private fun sampleRule(nt: NonTerminal): RuleEdge {
-        return prodRules[nt.value]!!.toList().let { rules ->
+        return (prodRules[nt.value] ?: error("Did not find NT ${nt.value}")).toList().let { rules ->
             rules.choice(
                 p = rules.map { it.weight.toDouble() }.toDoubleArray().normalize()
             )
@@ -71,11 +71,11 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
 
 private fun Map<String, List<RuleEdge>>.simplify(): Map<String, List<RuleEdge>> {
     // find simple NT->[[term+]] rules, so basically non-terminals that are only part of one single rule that is made up entirely by terminals
-    val groups = this.entries.groupBy { (_, value) -> value.size == 1 && value[0].substitution.all { it is Terminal } }
-        .entries.associate { it.key to it.value.associate { (k,v) -> k to v } }
+    val groups = this.entries
+        .groupBy { (_, value) -> value.size == 1 && value[0].substitution.all { it is Terminal } }.entries
+        .associate { it.key to it.value.associate { (k,v) -> k to v } }
     val complex = groups[false] ?: emptyMap()
     val simple = groups[true] ?: emptyMap()
-
 
     val simpleSub = simple.entries.associate { it.key to it.value.single().substitution }
 
