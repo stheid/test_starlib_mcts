@@ -28,8 +28,8 @@ javafx {
 
 dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4'
-    implementation 'net.objecthunter:exp4j:0.4.8'
     implementation 'com.charleskorn.kaml:kaml:0.46.0'
+    implementation 'org.python:jython-standalone:2.7.3b1'
     implementation 'ai.libs:jaicore-search:0.2.7'
     implementation 'org.junit.jupiter:junit-jupiter:5.9.0'
     implementation 'org.slf4j:slf4j-api:1.7.36'

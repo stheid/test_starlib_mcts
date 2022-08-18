@@ -13,7 +13,8 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbol
         cache.computeIfAbsent(node) {
             // else create new children and filter for existing ones
             node.currNT?.run {
-                prodRules[value]!!
+                // TODO
+                prodRules[value]!!.values.single()
                     .map { node.createChild(it) to it }
                     .map { (child, rule) ->
                         object : INewNodeDescription<SymbolsNode, RuleEdge> {
