@@ -38,7 +38,7 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
                             .flatMap { (nt, weight) ->
                                 nt.toRuleEdges(weight)
                             }
-            }.simplify()
+            }
 //            }.simplify()
 
             return Grammar(NonTerminal(grammar.entries.first().key), grammar)
