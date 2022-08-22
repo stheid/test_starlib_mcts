@@ -17,8 +17,14 @@ class GrammarTest {
     }
 
     @Test
+    fun readAnnotGrammar() {
+        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_unconstrained.yaml")?.path!!)
+        println(grammar)
+    }
+
+    @Test
     fun sample() {
-        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_localvar.yaml")?.path!!)
+        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_unconstrained.yaml")?.path!!)
         val byteseq = grammar.sample()
         println(byteseq)
 

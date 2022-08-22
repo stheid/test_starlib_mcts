@@ -1,0 +1,12 @@
+S:
+  - 'A B'
+
+A[true]:
+  - '"a"'
+
+A[false]:
+  - '"unreachable"'
+
+B[true]:
+  - '"b"'
+

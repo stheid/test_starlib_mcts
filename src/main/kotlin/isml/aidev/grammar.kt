@@ -29,24 +29,27 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
     companion object {
         fun fromFile(path: String): Grammar {
             val root = Yaml.default.parseToYamlNode(File(path).bufferedReader().readText())
-            val grammar = root.yamlMap.entries.entries.associate { (NT, substitution) ->
-                NT.content to
-                        listOf("true").associate {
-                            it to
-                                    substitution
-                                        .parseRule()
-                                        // we need to flatmap because there are range like rules (byte-> \x00 .. \xff) that will be expanded into multiple rules
-                                        .flatMap { (nt, weight) ->
-                                            nt.toRuleEdges(weight)
-                                        }
-                        }
-            }//.simplify()
+            val grammar = root.yamlMap.entries.entries.map { (leftProduction, rightProduction) ->
+                val (NT, cond) = leftProduction.content.splitNTandExpr()
+                Triple(NT, cond,
+                    rightProduction
+                        .parseRule()
+                        // we need to flatmap because there are range like rules (byte-> \x00 .. \xff) that will be expanded into multiple rules
+                        .flatMap { (substitution, weight) ->
+                            substitution.toRuleEdges(weight)
+                        })
+            }
+                .groupBy { (NT, _, _) -> NT }.entries
+                .associate { (NT, group) ->
+                    NT to group.associate { (_, cond, rules) -> cond to rules }
+                }//.simplify()*/
 
             return Grammar(NonTerminal(grammar.entries.first().key), grammar)
         }
     }
 
     fun sample(): String {
+        val vars: MutableMap<String, Int> = mutableMapOf()
         var nt: NonTerminal? = startSymbol
 
         var currSymbol = SymbolsNode(nt)
@@ -75,7 +78,10 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
     }
 }
 
+/*
 private fun Map<String, List<RuleEdge>>.simplify(): Map<String, List<RuleEdge>> {
+    // TODO
+
     // find simple NT->[[term+]] rules, so basically non-terminals that are only part of one single rule that is made up entirely by terminals
     val groups = this.entries
         .groupBy { (_, value) -> value.size == 1 && value[0].substitution.all { it is Terminal } }.entries
@@ -93,6 +99,7 @@ private fun Map<String, List<RuleEdge>>.simplify(): Map<String, List<RuleEdge>> 
         }
     }
 }
+*/
 
 private fun YamlNode.parseRule(): Map<String, Float> {
     return if (this is YamlList)
@@ -116,10 +123,13 @@ private fun String.toRuleEdges(weight: Float): List<RuleEdge> = // split
     Regex("""((?<!")"\p{Print}*?"(?!"))|\p{Graph}+""").findAll(this).toList()
         .map { it.value }
         .let {
-            it.tryExpand()?.map { term -> RuleEdge(listOf(term)) }
+            it.tryExpand()?.map { term -> RuleEdge(listOf(term).map { it to "" }) }
                 ?: listOf(
                     RuleEdge(
-                        it.map { if (it.isQuoted()) Terminal(it.unQuote()) else NonTerminal(it) },
+                        it.map {
+                            if (it.isQuoted()) Terminal(it.unQuote()) to "" else it.splitNTandExpr()
+                                .let { NonTerminal(it.first) to it.second }
+                        },
                         weight
                     )
                 )
@@ -131,3 +141,9 @@ private fun String.unQuote(): String = this.drop(1).dropLast(1)
     .replace(Regex("""\\u\p{XDigit}\p{XDigit}\p{XDigit}\p{XDigit}""")) {
         it.value.drop(2).toInt(16).toChar().toString()
     }
+
+private fun String.splitNTandExpr(): Pair<String, String> {
+    val matches = Regex("""(?<nt>\p{Graph}+?)(|(\[(?<cond>\p{Graph}+)]))""").matchEntire(this)
+    return (matches?.groups?.get("nt")?.value ?: error("could not parse NT")) to
+            (matches.groups["cond"]?.value ?: "true")
+}
