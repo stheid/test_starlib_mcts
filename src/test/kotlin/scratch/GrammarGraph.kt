@@ -1,12 +1,8 @@
 package scratch
 
-import ai.libs.jaicore.search.syntheticgraphs.treasuremodels.islands.noisymean.ATreasureMeanFunction
 import isml.aidev.Grammar
 import isml.aidev.RuleEdge
-import isml.aidev.Symbol
 import isml.aidev.Symbol.*
-import org.graphstream.stream.file.FileSourceGraphML.GraphMLConstants.EdgeAttribute
-import org.jfree.xml.attributehandlers.StringAttributeHandler
 import org.jgrapht.Graphs
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
@@ -15,10 +11,11 @@ import org.jgrapht.nio.DefaultAttribute
 import org.jgrapht.nio.dot.DOTExporter
 import java.io.File
 
-open class Node(open val value: String)
-data class ComplexNode(override val value: String) : Node(value)
-data class NtNode(override val value: String) : Node(value)
-data class TermNode(override val value: String) : Node(value)
+open class Node(open var value: String)
+data class ComplexNode(override var value: String) : Node(value)
+open class SimpleNode(override var value: String) : Node(value)
+data class NtNode(override var value: String) : SimpleNode(value)
+data class TermNode(override var value: String) : SimpleNode(value)
 
 class ComplexEdge : DefaultEdge()
 
@@ -55,19 +52,20 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
     // TODO convert grammar into a graph
     this.prodRules.forEach { (key, vallue) ->
         val keyNode = NtNode(key)
-        if (keyNode !in graph.vertexSet()) {
-            graph.addVertex(NtNode(key))
-        }
+        graph.addVertex(keyNode)
+
 
         vallue.forEach { it ->
             val value = it.substitution
             if (value.size == 1) {
                 if (value[0] is NonTerminal) {
-                    graph.addVertex(NtNode(value[0].value))
-                    graph.addEdge(keyNode, NtNode(value[0].value))
+                    val ntVertex = NtNode(value[0].value)
+                    graph.addVertex(ntVertex)
+                    graph.addEdge(keyNode, ntVertex)
                 } else if (value[0] is Terminal) {
-                    graph.addVertex(TermNode(value[0].value))
-                    graph.addEdge(keyNode, TermNode(value[0].value))
+                    val termVertex = TermNode(value[0].value)
+                    graph.addVertex(termVertex)
+                    graph.addEdge(keyNode, termVertex)
                 }
             } else {
                 var complexString = ""
@@ -113,16 +111,6 @@ private fun Grammar.Companion.fromGraph(graph: DefaultDirectedGraph<Node, Defaul
     return Grammar(startsymbol, grammar)
 }
 
-private fun <V, E> DefaultDirectedGraph<V, E>.targetEdgesOf(node: V): MutableList<DefaultEdge> {
-    val totedges: MutableList<DefaultEdge> = mutableListOf()
-    this.edgesOf(node).forEach { itx ->
-        if (getEdgeSource(itx) == node) {
-            totedges.add(itx as DefaultEdge)
-        }
-    }
-    return totedges
-}
-
 fun <V, E> DefaultDirectedGraph<V, E>.preds(vert: V): MutableList<V> {
     return Graphs.predecessorListOf(this, vert)!!
 }
@@ -131,20 +119,29 @@ fun <V, E> DefaultDirectedGraph<V, E>.succs(vert: V): MutableList<V> {
     return Graphs.successorListOf(this, vert)!!
 }
 
-private inline fun <V, reified DefaultEdge> DefaultDirectedGraph<V, DefaultEdge>.simplify(): DefaultDirectedGraph<V, DefaultEdge> {
+private fun <Node, DefaultEdge> DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirectedGraph<Node, DefaultEdge> {
     vertexSet().toList().forEach { node ->
         if (succs(node).size == 1 && preds(node).size == 1) {
             Triple(preds(node).single(), node, succs(node).single())
                 .also { (pred, node, succ) ->
-                    if (getEdge(pred, node)!!.javaClass == DefaultEdge::class.java
-                        && getEdge(node, succ)!!.javaClass == DefaultEdge::class.java
+                    if (getEdge(pred, node)!!.javaClass == DefaultEdge().javaClass
+                        && getEdge(node, succ)!!.javaClass == DefaultEdge().javaClass
                     ) {
+                        // pred, node and succ are primitive nodes
                         // make nodes predecessor refer to nodes successor
                         addEdge(pred, succ)
                         removeVertex(node)
 
-                        // TODO handle complex nodes diffrently
 
+                    } else if (getEdge(pred, node)!!.javaClass == ComplexEdge().javaClass
+                        && succ is SimpleNode
+                    ) {
+                        // predecessor is a complex node
+                        // modify pred to point to succ
+                        addEdge(pred, succ, ComplexEdge() as DefaultEdge)
+                        // modify the internal value of the predecessor according to the succ
+                        (pred as ComplexNode).value.replace((node as SimpleNode).value, (succ as SimpleNode).value)
+                        removeVertex(node)
                     }
                 }
         }
