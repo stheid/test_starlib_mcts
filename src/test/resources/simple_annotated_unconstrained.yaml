@@ -1,12 +1,12 @@
 S:
-  - 'A B'
+  - 'A B[i+=1]'
 
-A[true]:
+A[1==1]:
   - '"a"'
 
-A[false]:
+A[1==0]:
   - '"unreachable"'
 
-B[true]:
+B[1==1]:
   - '"b"'
 

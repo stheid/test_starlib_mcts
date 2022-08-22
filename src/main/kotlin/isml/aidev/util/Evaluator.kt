@@ -8,7 +8,11 @@ import org.python.modules._collections.PyDefaultDict
 import org.python.util.PythonInterpreter
 
 
-class Evaluator {
+class Evaluator private constructor() {
+    companion object {
+        fun instance() = Evaluator()
+    }
+
     private val interp = PythonInterpreter().apply {
         exec("from collections import defaultdict")
     }
@@ -21,14 +25,17 @@ class Evaluator {
         }
     }
 
-    public fun eval(expr: String, vars: Map<String, Int> = mapOf()): Boolean {
+    fun eval(expr: String, vars: Map<String, Int> = mapOf()): Boolean {
         // evaluating expressions
+        val code = "res = eval(\"${expr}\",{},loc)"
         interp.set("loc", vars.toDefaultDict())
-        interp.exec("res = eval(\"${expr}\",{},loc)")
-        return (interp["res"] as PyBoolean).booleanValue
+        interp.exec(code)
+        return (interp["res"] as? PyBoolean)?.booleanValue
+            ?: error("the result of $code could not be parsed as a boolean. " +
+                    "Did you use correct python Syntax (e.g. Boolean literals must be capital like \"True\")")
     }
 
-    public fun exec(stmt: String, vars: Map<String, Int> = mapOf()): Map<String, Int> {
+    fun exec(stmt: String, vars: Map<String, Int> = mapOf()): Map<String, Int> {
         // executing statements
         interp.set("loc", vars.toDefaultDict())
         interp.exec("exec (\"${stmt}\",{},loc)")

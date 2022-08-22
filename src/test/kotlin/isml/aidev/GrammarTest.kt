@@ -1,7 +1,6 @@
 package isml.aidev
 
 import org.junit.jupiter.api.Test
-import java.io.File
 
 class GrammarTest {
     @Test
@@ -15,6 +14,11 @@ class GrammarTest {
         val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("json_simple_gram.yml")?.path!!)
         println(grammar)
     }
+    @Test
+    fun readSimpleGrammar() {
+        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("abc.yaml")?.path!!)
+        println(grammar)
+    }
 
     @Test
     fun readAnnotGrammar() {
@@ -23,11 +27,18 @@ class GrammarTest {
     }
 
     @Test
-    fun sample() {
+    fun sampleSimpleGram() {
+        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("abc.yaml")?.path!!)
+        val byteseq = grammar.sample()
+        println(byteseq)
+    }
+
+    @Test
+    fun sampleAnotatedGram() {
         val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_unconstrained.yaml")?.path!!)
         val byteseq = grammar.sample()
         println(byteseq)
 
-        File("out.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
+        //File("out.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
     }
 }

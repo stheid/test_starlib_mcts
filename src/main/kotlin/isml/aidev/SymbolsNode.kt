@@ -7,6 +7,7 @@ class SymbolsNode(
     val currNT: Symbol.NonTerminal?,
     val substitutionNTs: List<Symbol.NonTerminal> = emptyList(),
     private val parent: SymbolsNode? = null,
+    val vars: MutableMap<String, Int> = mutableMapOf(),
     val depth: Int = 0,
 ) {
     val isFinished
@@ -28,6 +29,7 @@ class SymbolsNode(
     fun createChild(rule: RuleEdge): SymbolsNode {
         val sub = rule.substitution.filterIsInstance<Symbol.NonTerminal>().map { it.copy() }.toList()
         val nextNT = (remainingNTs.toList() + sub).randomOrNull()
-        return SymbolsNode(nextNT, sub, this, depth + 1)
+        // TODO Evaluate Expression
+        return SymbolsNode(nextNT, sub, this, depth = depth + 1)
     }
 }
