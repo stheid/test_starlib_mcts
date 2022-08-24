@@ -37,8 +37,9 @@ class Evaluator private constructor() {
 
     fun exec(stmt: String, vars: Map<String, Int> = mapOf()): Map<String, Int> {
         // executing statements
+        val code = "exec(\"${stmt}\",{},loc)"
         interp.set("loc", vars.toDefaultDict())
-        interp.exec("exec (\"${stmt}\",{},loc)")
+        interp.exec(code)
         val outVars = interp["loc"]
         return (outVars as PyDictionary).toList().associate { it.first as String to it.second as Int }
     }

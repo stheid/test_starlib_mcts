@@ -41,4 +41,13 @@ class GrammarTest {
 
         //File("out.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
     }
+
+    @Test
+    fun sampleAnotatedLocalGram() {
+        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_localvar.yaml")?.path!!)
+        val byteseq = grammar.sample()
+        println(byteseq)
+
+        //File("out.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
+    }
 }

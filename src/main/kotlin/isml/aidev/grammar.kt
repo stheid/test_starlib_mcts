@@ -56,7 +56,7 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
     }
 
     fun sample(): String {
-        val vars: MutableMap<String, Int> = mutableMapOf()
+        val globalvars: MutableMap<String, Int> = mutableMapOf()
         var nt: NonTerminal? = startSymbol
 
         var currSymbol = SymbolsNode(nt)
@@ -64,7 +64,7 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
 
         while (nt != null) {
             // sample Rule from valid rules
-            val rule = validRules(nt).let { rules ->
+            val rule = validRules(nt,currSymbol.localvars).let { rules ->
                 rules.choice(rules.map { it.weight.toDouble() }.toDoubleArray().normalize())
             }
             currSymbol = currSymbol.createChild(rule)
@@ -116,7 +116,7 @@ private fun List<String>.tryExpand(): List<Terminal>? {
 
 private fun String.toRuleEdges(weight: Float): List<RuleEdge> {
     // quoted strings can have whitespaces (print), the nonterminals must only be composed by printable non-whitespace chars (graph)
-    val statements = mutableMapOf<NonTerminal, String>()
+    val statements = mutableMapOf<String, String>()
 
     return Regex("""((?<!")"\p{Print}*?"(?!"))|\p{Graph}+""").findAll(this).toList().map { it.value }.let { rawRule ->
             rawRule.tryExpand()
@@ -125,12 +125,13 @@ private fun String.toRuleEdges(weight: Float): List<RuleEdge> {
                 // is not expandable, means we create on single rule out of the raw rule
                 val symbols = rawRule.map { symbol ->
                     // neutral statement without sideffects is pass
-                    if (symbol.isQuoted()) Terminal(it.unQuote())
+                    if (symbol.isQuoted())
+                        Terminal(symbol.unQuote())
                     else symbol.splitNTandExpr().let { (ntVal, stmt) ->
                             NonTerminal(ntVal).also { nt ->
                                 // if there is a statement attached to this NT we add it to the map of statements
                                 stmt?.let {
-                                    statements[nt] = stmt
+                                    statements[nt.value] = stmt
                                 }
                             }
                         }
