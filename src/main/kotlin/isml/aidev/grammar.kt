@@ -24,7 +24,7 @@ sealed class Symbol(open val value: String) {
     }
 }
 
-typealias ProdRules = Map<String, Map<String, List<RuleEdge>>>
+typealias ProdRules = Map<String, Map<String?, List<RuleEdge>>>
 
 data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
     companion object {
@@ -34,7 +34,7 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
                 val (NT, cond) = leftProduction.content.splitNTandExpr()
                 // the default condition is "true"
                 // (true literal in eval does not work in eval, we need to use another true expression instead)
-                Triple(NT, cond ?: "1==1", rightProduction.parseRule()
+                Triple(NT, cond, rightProduction.parseRule()
                     // we need to flatmap because there are range like rules (byte-> \x00 .. \xff) that will be expanded into multiple rules
                     .flatMap { (substitution, weight) ->
                         substitution.toRuleEdges(weight)
@@ -49,9 +49,11 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
 
     fun validRules(nt: NonTerminal, vars: Map<String, Int> = mapOf()): List<RuleEdge> {
         val ruleAlternatives = prodRules[nt.value] ?: error("Did not find NT ${nt.value}")
-        val trueCondition = ruleAlternatives.keys.singleOrNull { cond ->
+        val trueCondition = ruleAlternatives.keys.filterNotNull().singleOrNull { cond ->
             Evaluator.instance().eval(cond, vars)
-        } ?: error("more or less than one production rule with a fulfilled condition. (${nt.value}")
+        }
+        if (trueCondition !in ruleAlternatives)
+            error("more or less than one production rule with a fulfilled condition. (${nt.value}")
         return ruleAlternatives[trueCondition]!!
     }
 
@@ -118,7 +120,8 @@ private fun String.toRuleEdges(weight: Float): List<RuleEdge> {
     // quoted strings can have whitespaces (print), the nonterminals must only be composed by printable non-whitespace chars (graph)
     val statements = mutableMapOf<String, String>()
 
-    return Regex("""((?<!")"\p{Print}*?"(?!"))|([\p{Graph}&&[^\[]]+(\[\p{Print}*?]|))""").findAll(this).toList().map { it.value }.let { rawRule ->
+    return Regex("""((?<!")"\p{Print}*?"(?!"))|([\p{Graph}&&[^\[]]+(\[\p{Print}*?]|))""").findAll(this).toList()
+        .map { it.value }.let { rawRule ->
         rawRule.tryExpand()
             // All expandable rules must consist entirely of Terminals
             ?.map { term -> RuleEdge(listOf(term)) } ?: listOf(let {
