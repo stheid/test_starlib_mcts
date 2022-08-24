@@ -40,8 +40,8 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
                         substitution.toRuleEdges(weight)
                     })
             }.groupBy { (NT, _, _) -> NT }.entries.associate { (NT, group) ->
-                    NT to group.associate { (_, cond, rules) -> cond to rules }
-                }//.simplify()*/
+                NT to group.associate { (_, cond, rules) -> cond to rules }
+            }//.simplify()*/
 
             return Grammar(NonTerminal(grammar.entries.first().key), grammar)
         }
@@ -64,7 +64,7 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
 
         while (nt != null) {
             // sample Rule from valid rules
-            val rule = validRules(nt,currSymbol.localvars).let { rules ->
+            val rule = validRules(nt, globalvars + currSymbol.localvars).let { rules ->
                 rules.choice(rules.map { it.weight.toDouble() }.toDoubleArray().normalize())
             }
             currSymbol = currSymbol.createChild(rule)
@@ -118,28 +118,28 @@ private fun String.toRuleEdges(weight: Float): List<RuleEdge> {
     // quoted strings can have whitespaces (print), the nonterminals must only be composed by printable non-whitespace chars (graph)
     val statements = mutableMapOf<String, String>()
 
-    return Regex("""((?<!")"\p{Print}*?"(?!"))|\p{Graph}+""").findAll(this).toList().map { it.value }.let { rawRule ->
-            rawRule.tryExpand()
-                // All expandable rules must consist entirely of Terminals
-                ?.map { term -> RuleEdge(listOf(term)) } ?: listOf(let {
-                // is not expandable, means we create on single rule out of the raw rule
-                val symbols = rawRule.map { symbol ->
-                    // neutral statement without sideffects is pass
-                    if (symbol.isQuoted())
-                        Terminal(symbol.unQuote())
-                    else symbol.splitNTandExpr().let { (ntVal, stmt) ->
-                            NonTerminal(ntVal).also { nt ->
-                                // if there is a statement attached to this NT we add it to the map of statements
-                                stmt?.let {
-                                    statements[nt.value] = stmt
-                                }
-                            }
+    return Regex("""((?<!")"\p{Print}*?"(?!"))|([\p{Graph}&&[^\[]]+(\[\p{Print}*?]|))""").findAll(this).toList().map { it.value }.let { rawRule ->
+        rawRule.tryExpand()
+            // All expandable rules must consist entirely of Terminals
+            ?.map { term -> RuleEdge(listOf(term)) } ?: listOf(let {
+            // is not expandable, means we create on single rule out of the raw rule
+            val symbols = rawRule.map { symbol ->
+                // neutral statement without sideffects is pass
+                if (symbol.isQuoted())
+                    Terminal(symbol.unQuote())
+                else symbol.splitNTandExpr().let { (ntVal, stmt) ->
+                    NonTerminal(ntVal).also { nt ->
+                        // if there is a statement attached to this NT we add it to the map of statements
+                        stmt?.let {
+                            statements[nt.value] = stmt
                         }
+                    }
                 }
+            }
 
-                RuleEdge(symbols, statements.toMap(), weight)
-            })
-        }
+            RuleEdge(symbols, statements.toMap(), weight)
+        })
+    }
 }
 
 private fun String.isQuoted(): Boolean = this.startsWith("\"") && this.endsWith("\"")
@@ -150,6 +150,6 @@ private fun String.unQuote(): String = this.drop(1).dropLast(1)
     }
 
 private fun String.splitNTandExpr(): Pair<String, String?> {
-    val matches = Regex("""(?<nt>\p{Graph}+?)(|(\[(?<cond>\p{Graph}+)]))""").matchEntire(this)
+    val matches = Regex("""(?<nt>\p{Graph}+?)(|(\[(?<cond>\p{Print}+)]))""").matchEntire(this)
     return (matches?.groups?.get("nt")?.value ?: error("could not parse NT")) to (matches.groups["cond"]?.value)
 }
