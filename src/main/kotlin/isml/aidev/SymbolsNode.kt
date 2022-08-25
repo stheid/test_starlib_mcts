@@ -9,7 +9,7 @@ class SymbolsNode(
     val currNT: Symbol.NonTerminal?,
     val substitutionNTs: List<Symbol.NonTerminal> = emptyList(),
     private val parent: SymbolsNode? = null,
-    val localvars: Map<String, Int> = mapOf(),
+    val localvars: Map<String, Int>? = null,
     val depth: Int = 0,
 ) {
     val isFinished
@@ -31,9 +31,9 @@ class SymbolsNode(
     fun createChild(rule: RuleEdge): SymbolsNode {
         val sub = rule.substitution.filterIsInstance<Symbol.NonTerminal>().map { it.copy() }.toList()
         val nextNT = (remainingNTs.toList() + sub).randomOrNull()
-        val newLocalVars = rule.expressions[nextNT?.value]?.let {
+        val newLocalVars = rule.expression?.let {
             Evaluator.instance().exec(it, localvars)
         } ?: localvars
-        return SymbolsNode(nextNT, sub, this, newLocalVars, depth + 1)
+        return SymbolsNode(nextNT, sub, this, if (nextNT != null) newLocalVars else mapOf(), depth + 1)
     }
 }

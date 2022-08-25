@@ -25,20 +25,22 @@ class Evaluator private constructor() {
         }
     }
 
-    fun eval(expr: String, vars: Map<String, Int> = mapOf()): Boolean {
+    fun eval(expr: String, vars: Map<String, Int>? = null): Boolean {
         // evaluating expressions
         val code = "res = eval(\"${expr}\",{},loc)"
-        interp.set("loc", vars.toDefaultDict())
+        interp.set("loc", (vars ?: mapOf()).toDefaultDict())
         interp.exec(code)
         return (interp["res"] as? PyBoolean)?.booleanValue
-            ?: error("the result of $code could not be parsed as a boolean. " +
-                    "Did you use correct python Syntax (e.g. Boolean literals must be capital like \"True\")")
+            ?: error(
+                "the result of $code could not be parsed as a boolean. " +
+                        "Did you use correct python Syntax (e.g. Boolean literals must be capital like \"True\")"
+            )
     }
 
-    fun exec(stmt: String, vars: Map<String, Int> = mapOf()): Map<String, Int> {
+    fun exec(stmt: String, vars: Map<String, Int>? = null): Map<String, Int> {
         // executing statements
         val code = "exec(\"${stmt}\",{},loc)"
-        interp.set("loc", vars.toDefaultDict())
+        interp.set("loc", (vars ?: mapOf()).toDefaultDict())
         interp.exec(code)
         val outVars = interp["loc"]
         return (outVars as PyDictionary).toList().associate { it.first as String to it.second as Int }

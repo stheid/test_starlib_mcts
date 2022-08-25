@@ -31,7 +31,7 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
         fun fromFile(path: String): Grammar {
             val root = Yaml.default.parseToYamlNode(File(path).bufferedReader().readText())
             val grammar = root.yamlMap.entries.entries.map { (leftProduction, rightProduction) ->
-                val (NT, cond) = leftProduction.content.splitNTandExpr()
+                val (NT, cond) = leftProduction.content.splitNtAndCond()
                 // the default condition is "true"
                 // (true literal in eval does not work in eval, we need to use another true expression instead)
                 Triple(NT, cond, rightProduction.parseRule()
@@ -47,7 +47,7 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
         }
     }
 
-    fun validRules(nt: NonTerminal, vars: Map<String, Int> = mapOf()): List<RuleEdge> {
+    fun validRules(nt: NonTerminal, vars: Map<String, Int>? = null): List<RuleEdge> {
         val ruleAlternatives = prodRules[nt.value] ?: error("Did not find NT ${nt.value}")
         val trueCondition = ruleAlternatives.keys.filterNotNull().singleOrNull { cond ->
             Evaluator.instance().eval(cond, vars)
@@ -66,7 +66,7 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
 
         while (nt != null) {
             // sample Rule from valid rules
-            val rule = validRules(nt, globalvars + currSymbol.localvars).let { rules ->
+            val rule = validRules(nt, globalvars + (currSymbol.localvars ?: mapOf())).let { rules ->
                 rules.choice(rules.map { it.weight.toDouble() }.toDoubleArray().normalize())
             }
             currSymbol = currSymbol.createChild(rule)
@@ -118,10 +118,9 @@ private fun List<String>.tryExpand(): List<Terminal>? {
 
 private fun String.toRuleEdges(weight: Float): List<RuleEdge> {
     // quoted strings can have whitespaces (print), the nonterminals must only be composed by printable non-whitespace chars (graph)
-    val statements = mutableMapOf<String, String>()
+    val (rawSymbols, statement) = this.splitSymbolsAndStmt()
 
-    return Regex("""((?<!")"\p{Print}*?"(?!"))|([\p{Graph}&&[^\[]]+(\[\p{Print}*?]|))""").findAll(this).toList()
-        .map { it.value }.let { rawRule ->
+    return rawSymbols.splitSymbols().let { rawRule ->
         rawRule.tryExpand()
             // All expandable rules must consist entirely of Terminals
             ?.map { term -> RuleEdge(listOf(term)) } ?: listOf(let {
@@ -130,17 +129,11 @@ private fun String.toRuleEdges(weight: Float): List<RuleEdge> {
                 // neutral statement without sideffects is pass
                 if (symbol.isQuoted())
                     Terminal(symbol.unQuote())
-                else symbol.splitNTandExpr().let { (ntVal, stmt) ->
-                    NonTerminal(ntVal).also { nt ->
-                        // if there is a statement attached to this NT we add it to the map of statements
-                        stmt?.let {
-                            statements[nt.value] = stmt
-                        }
-                    }
-                }
+                else
+                    NonTerminal(symbol)
             }
 
-            RuleEdge(symbols, statements.toMap(), weight)
+            RuleEdge(symbols, statement, weight)
         })
     }
 }
@@ -152,7 +145,20 @@ private fun String.unQuote(): String = this.drop(1).dropLast(1)
         it.value.drop(2).toInt(16).toChar().toString()
     }
 
-private fun String.splitNTandExpr(): Pair<String, String?> {
+private fun String.splitNtAndCond(): Pair<String, String?> {
     val matches = Regex("""(?<nt>\p{Graph}+?)(|(\[(?<cond>\p{Print}+)]))""").matchEntire(this)
-    return (matches?.groups?.get("nt")?.value ?: error("could not parse NT")) to (matches.groups["cond"]?.value)
+    val nt = matches?.groups?.get("nt")?.value ?: error("could not parse NT")
+    val cond = matches.groups["cond"]?.value
+    return nt to cond
+}
+
+private fun String.splitSymbolsAndStmt(): Pair<String, String?> {
+    val matches = Regex("""(\[(?<expr>\p{Print}+)]|) ?(?<symbols>.*)""").matchEntire(this)
+    val rawSymbols = matches?.groups?.get("symbols")?.value ?: ""
+    val statement = matches?.groups?.get("expr")?.value
+    return rawSymbols to statement
+}
+
+private fun String.splitSymbols(): List<String> {
+    return Regex("""((?<!")"\p{Print}*?"(?!"))|(\p{Graph}+)""").findAll(this).toList().map { it.value }
 }

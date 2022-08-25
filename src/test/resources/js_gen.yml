@@ -20,9 +20,9 @@ genStmt[i<6]:
   - false six genBlock[i++]
 
 genStmt[i==6]:
-  - true zero genExpr [del i]
-  - true one [del i] # break
-  - true two [del i] # continue
+  - true zero genExpr
+  - true one # break
+  - true two # continue
   - true three genReturn [del i]
   - true four genExpr [del i] # throw
   - true five genIdent [del i] # var
@@ -31,8 +31,8 @@ genStmt[i==6]:
 # generateExpression
 # true is || with exprDepth>=maxExprDepth
 genExpr[j<10]:
-  'true zero genLit [del j]': 8
-  'true one genIdent [del j]': 8
+  'true zero genLit': 8
+  'true one genIdent': 8
   'false zero int genExpr[j++] genExpr[j++]': 2 # binary
   'false one int genExpr[j++]': 2 # unary
   'false two genExpr[j++] genExpr[j++] genExpr[j++]': 2 # ternary
@@ -44,8 +44,8 @@ genExpr[j<10]:
   'false seven mean3Ident[j++] false genExpr': 1 # arrowfunc
 
 genExpr[j==10]:
-  - zero genLit [del j]
-  - one genIdent [del j]
+  - zero genLit
+  - one genIdent
 
 genReturn:
   - true
