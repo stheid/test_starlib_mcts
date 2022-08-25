@@ -11,13 +11,15 @@ import org.jgrapht.nio.Attribute
 import org.jgrapht.nio.DefaultAttribute
 import org.jgrapht.nio.dot.DOTExporter
 import java.io.File
-import java.util.Arrays
 
-open class Node(open var value: String)
-data class ComplexNode(override var value: String, var nodes: MutableList<Node>) : Node(value)
-open class SimpleNode(override var value: String) : Node(value)
-data class NtNode(override var value: String) : SimpleNode(value)
-data class TermNode(override var value: String) : SimpleNode(value)
+open class Node(open var nodes: List<Symbol>) {
+    val value: String
+        get() = nodes.toString()
+}
+data class ComplexNode(override var nodes: List<Symbol>) : Node(nodes)
+open class SimpleNode(override var nodes: List<Symbol>) : Node(nodes)
+data class NtNode(override var nodes: List<Symbol>) : SimpleNode(nodes)
+data class TermNode(override var nodes: List<Symbol>) : SimpleNode(nodes)
 
 class ComplexEdge : DefaultEdge()
 
@@ -53,44 +55,49 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
 
     // TODO convert grammar into a graph
     this.prodRules.forEach { (key, vallue) ->
-        val keyNode = NtNode(key)
+        val keyNode = NtNode(mutableListOf(NonTerminal(key)))
         graph.addVertex(keyNode)
 
 
         vallue.forEach { it ->
             val value = it.substitution
             if (value.size == 1) {
+                var tempVertex = Node(mutableListOf())
                 if (value[0] is NonTerminal) {
-                    val ntVertex = NtNode(value[0].value)
-                    graph.addVertex(ntVertex)
-                    graph.addEdge(keyNode, ntVertex)
+                    tempVertex = NtNode(mutableListOf(NonTerminal(value[0].value)))
                 } else if (value[0] is Terminal) {
-                    val termVertex = TermNode(value[0].value)
-                    graph.addVertex(termVertex)
-                    graph.addEdge(keyNode, termVertex)
+                    tempVertex = TermNode(mutableListOf(Terminal(value[0].value)))
                 }
+                if (tempVertex !in graph.vertexSet()) {
+                    graph.addVertex(tempVertex)
+                }
+                graph.addEdge(keyNode, tempVertex)
             } else {
                 var complexString = ""
-                val cs_list: MutableList<Node> = mutableListOf()
+                val cs_list: MutableList<Symbol> = mutableListOf()
                 value.forEach { its ->
                     complexString += " " + its.value
                     if (its is NonTerminal) {
-                        cs_list.add(NtNode(its.value))
+                        cs_list.add(NonTerminal(its.value))
                     } else if (its is Terminal) {
-                        cs_list.add(TermNode(its.value))
+                        cs_list.add(Terminal(its.value))
                     } // get rid of it
                 }
-                val cn = ComplexNode(complexString, cs_list)
-                graph.addVertex(cn)
-                graph.addEdge(keyNode, cn)
-                cs_list.forEach {
-                    if (it !is TermNode){
-                        if (it !in graph.vertexSet()) {
-                            graph.addVertex(it)
-                        } // maybe get rid of it
-                        graph.addEdge(cn, it, ComplexEdge())
-                    }
+                val cn = ComplexNode(cs_list)
+                if(cn !in graph.vertexSet()) {
+                    graph.addVertex(cn)
                 }
+                graph.addEdge(keyNode, cn)
+////                cs_list.forEach{
+////                    var tempnode = Node(mutableListOf())
+////                    if (it is Terminal){
+////                        tempnode = TermNode(mutableListOf(it))
+////                    }else{tempnode = NtNode(mutableListOf(it))}
+////                    if (tempnode !in graph.vertexSet()) {
+////                        graph.addVertex(tempnode)
+////                    }
+////                    graph.addEdge(cn, tempnode, ComplexEdge())
+//                }
             }
         }
     }
@@ -152,10 +159,10 @@ fun <V, E> DefaultDirectedGraph<V, E>.succs(vert: V): MutableList<V> {
     return Graphs.successorListOf(this, vert)!!
 }
 
-private fun <Node, DefaultEdge> DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirectedGraph<Node, DefaultEdge> {
+fun <Node, DefaultEdge> DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirectedGraph<Node, DefaultEdge> {
     vertexSet().toList().forEach { node ->
         // The first condition below is important because on deletion of certain nodes during
-        // complex nodes simplification, it throws an error.
+        // complex nodes' simplification, it throws an error.
         if (node in this.vertexSet() && succs(node).size == 1 && preds(node).size == 1) {
             Triple(preds(node).single(), node, succs(node).single())
                 .also { (pred, node, succ) ->
@@ -170,17 +177,20 @@ private fun <Node, DefaultEdge> DefaultDirectedGraph<Node, DefaultEdge>.simplify
 
                     } else if (getEdge(pred, node)!!.javaClass == ComplexEdge().javaClass
                         && succ is SimpleNode
-                    ) {
+                    ){
+                        // complex node -> NT -> Terminal
+                        // pred         -> node -> succ
                         // predecessor is a complex node
                         // modify pred to point to succ
-                        addEdge(pred, succ, ComplexEdge() as DefaultEdge)
-                        // modify the internal value of the predecessor according to the succ
-                        (pred as ComplexNode).value = (pred as ComplexNode).value.replace((node as SimpleNode).value, (succ as SimpleNode).value)
-                        removeVertex(node)
-                        if(succ is TermNode)
-                            removeVertex(succ)
-                        println("")
-                        // todo: After above simplification, check if complex node points to only terminals and then remove them.
+//                        addEdge(pred, succ, ComplexEdge() as DefaultEdge)
+//                        // modify the internal value of the predecessor according to the succ
+//                        (pred as ComplexNode).value = (pred as ComplexNode).value.replace((node as SimpleNode).value, (succ as SimpleNode).value)
+//                        removeVertex(node)
+//                        // todo: After above simplification, check if complex node points to only terminals and then remove them.
+//                        if(succ is TermNode)
+//                            removeVertex(succ)
+//                        // update ComplexNode.nodes
+//                        println("")
                     }
                 }
         }
