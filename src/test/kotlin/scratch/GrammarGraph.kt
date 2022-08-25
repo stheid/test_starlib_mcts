@@ -1,9 +1,11 @@
 package scratch
 
+import com.fasterxml.jackson.databind.ser.std.StdKeySerializers.Default
 import isml.aidev.Grammar
 import isml.aidev.RuleEdge
 import isml.aidev.Symbol
 import isml.aidev.Symbol.*
+import isml.aidev.util.Chain
 import org.antlr.v4.runtime.misc.OrderedHashSet
 import org.jgrapht.Graphs
 import org.jgrapht.graph.DefaultDirectedGraph
@@ -12,14 +14,17 @@ import org.jgrapht.nio.Attribute
 import org.jgrapht.nio.DefaultAttribute
 import org.jgrapht.nio.dot.DOTExporter
 import java.io.File
+import java.util.Queue
+import java.util.SimpleTimeZone
 
-open class Node(open var nodes: LinkedHashSet<Symbol>) {
+open class Node(open var nodes: Chain<Symbol>) {
     val value: String
         get() = nodes.toString()
 
     override fun hashCode(): Int {
         return value.hashCode()
     }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -28,13 +33,14 @@ open class Node(open var nodes: LinkedHashSet<Symbol>) {
     }
 }
 
-data class ComplexNode(override var nodes: LinkedHashSet<Symbol>) : Node(nodes)
-open class SimpleNode(override var nodes: LinkedHashSet<Symbol>) : Node(nodes)
+data class ComplexNode(override var nodes: Chain<Symbol>) : Node(nodes)
+data class SimpleNode(override var nodes: Chain<Symbol>) : Node(nodes)
 
 class ComplexEdge : DefaultEdge()
 
 fun main() {
-    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
+//    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
+    val grammar = Grammar.fromResource("simple_xml_gen.yml")
 
     var graph = grammar.toGraph()
     val exporter = DOTExporter<Node, DefaultEdge> { """"${it.value}"""" }
@@ -49,12 +55,13 @@ fun main() {
         )
     }
 
-    exporter.exportGraph(graph, File("grammar.dot").bufferedWriter())
-    graph = graph.simplify()
+//    exporter.exportGraph(graph, File("grammar_raw.dot").bufferedWriter())
+    graph = graph.simplify(exporter)
+    println(graph)
     exporter.exportGraph(graph, File("grammar_simple.dot").bufferedWriter())
 
-    val simplegrammar = Grammar.fromGraph(graph)
-    println(simplegrammar)
+//    val simplegrammar = Grammar.fromGraph(graph)
+//    println(simplegrammar)
 }
 
 
@@ -67,14 +74,14 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
 
     fun Node.addToGraph(keyNode: Node): Node {
         graph.addVertex(this)
-        graph.addEdge(keyNode,this)
+        graph.addEdge(keyNode, this)
         return this
     }
 
     this.prodRules.forEach { (key, vallue) ->
         val nt = NonTerminal(key)
         val keyNode = nodes.getOrPut(nt.toString()) {
-            SimpleNode(linkedSetOf(nt)).apply {
+            SimpleNode(Chain(listOf(nt))).apply {
                 graph.addVertex(this)
             }
         }
@@ -85,12 +92,13 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
                 1 -> {
                     val ntVal = value.single().toString()
                     nodes.getOrPut(ntVal) {
-                        SimpleNode(LinkedHashSet(value)).addToGraph(keyNode)
+                        SimpleNode(Chain(value)).addToGraph(keyNode)
                     }
                 }
+
                 else -> {
                     complexNodes.getOrPut(value.toString()) {
-                        ComplexNode(LinkedHashSet(value)).addToGraph(keyNode)
+                        ComplexNode(Chain(value)).addToGraph(keyNode)
                     }
                 }
             }
@@ -160,8 +168,14 @@ fun <V, E> DefaultDirectedGraph<V, E>.succs(vert: V): MutableList<V> {
     return Graphs.successorListOf(this, vert)!!
 }
 
-private fun <Node, DefaultEdge> DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirectedGraph<Node, DefaultEdge> {
-    vertexSet().toList().forEach { node ->
+private fun <Node, DefaultEdge> DefaultDirectedGraph<Node, DefaultEdge>.simplify(exporter: DOTExporter<Node, DefaultEdge>? = null): DefaultDirectedGraph<Node, DefaultEdge> {
+    val nodesToProcess = vertexSet().toMutableList()
+
+    while (nodesToProcess.isNotEmpty()) {
+        val node = nodesToProcess.removeFirst()
+//        if (exporter != null) {
+//            exporter.exportGraph(this, File("grammar.dot").bufferedWriter())
+//        }
         // The first condition below is important because on deletion of certain nodes during
         // complex nodes' simplification, it throws an error.
         if (node in this.vertexSet() && succs(node).size == 1 && preds(node).size == 1) {
@@ -175,11 +189,14 @@ private fun <Node, DefaultEdge> DefaultDirectedGraph<Node, DefaultEdge>.simplify
                         addEdge(pred, succ)
                         removeVertex(node)
 
+                        nodesToProcess.addAll(listOf( pred,succ))
+
 
                     } else if (getEdge(pred, node)!!.javaClass == ComplexEdge().javaClass
                         && pred is ComplexNode
                         && node is SimpleNode
                         && succ is SimpleNode
+                        && succ.nodes.all { it is Terminal }
                     ) {
                         // complex node -> NT -> Terminal
                         // pred         -> node -> succ
@@ -190,16 +207,27 @@ private fun <Node, DefaultEdge> DefaultDirectedGraph<Node, DefaultEdge>.simplify
 
                         removeVertex(node)
                         // todo: After above simplification, check if complex node points to only terminals and then remove them.
-                        if(succ.nodes.all {  it is Terminal} ){
-                            // remove this succ
-                            removeVertex(succ)
-                            // and update complexnode
-                          //  pred.nodes[node.nodes.single()]
+
+                        // remove this succ
+                        // and update complexnode
+                        // get node that we need to modify
+                        val oldNT = node.nodes.single()
+                        val link = pred.nodes.linkIterator().asSequence()
+                            .single { it.value.toString() == oldNT.toString() }
+                        pred.nodes.replace(link, succ.nodes)
+                        removeVertex(succ)
+
+                        if (pred.nodes.all { it is Terminal }) {
+                            val newNode = SimpleNode(pred.nodes) as Node
+
+                            addVertex(newNode)
+                            preds(pred).forEach {
+                                addEdge(it, newNode)
+                            }
+                            removeVertex(pred)
+                            nodesToProcess.addAll(preds(newNode))
+
                         }
-
-                        // update ComplexNode.nodes
-
-                        println("")
                     }
                 }
         }
