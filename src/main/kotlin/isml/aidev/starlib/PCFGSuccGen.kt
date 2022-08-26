@@ -10,6 +10,7 @@ class PCFGSuccGen(private val prodRules: ProdRules) : ISuccessorGenerator<Symbol
     private val cache = HashMap<SymbolsNode, List<INewNodeDescription<SymbolsNode, RuleEdge>>>()
 
     override fun generateSuccessors(node: SymbolsNode) =
+        // TODO we might need to disable caching when global variables are present as they may change the still available edges
         cache.computeIfAbsent(node) {
             // else create new children and filter for existing ones
             node.currNT?.run {

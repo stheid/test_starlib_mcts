@@ -1,7 +1,5 @@
 package isml.aidev
 
-import isml.aidev.util.Evaluator
-
 /**
  * Must not be a data-class because we use object references for equality and caching
  */
@@ -28,12 +26,9 @@ class SymbolsNode(
     override fun toString() =
         "SymbolNode(currNT=${currNT}, depth=${depth})"
 
-    fun createChild(rule: RuleEdge): SymbolsNode {
+    fun createChild(rule: RuleEdge, childsLocalVars:Map<String, Int>? = null): SymbolsNode {
         val sub = rule.substitution.filterIsInstance<Symbol.NonTerminal>().map { it.copy() }.toList()
         val nextNT = (remainingNTs.toList() + sub).randomOrNull()
-        val newLocalVars = rule.expression?.let {
-            Evaluator.instance().exec(it, localvars)
-        } ?: localvars
-        return SymbolsNode(nextNT, sub, this, if (nextNT != null) newLocalVars else mapOf(), depth + 1)
+        return SymbolsNode(nextNT, sub, this, if (nextNT != null) childsLocalVars else null, depth + 1)
     }
 }

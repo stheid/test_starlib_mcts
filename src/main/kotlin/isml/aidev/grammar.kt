@@ -58,18 +58,23 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
     }
 
     fun sample(): String {
-        val globalvars: MutableMap<String, Int> = mutableMapOf()
+        var globalvars: Map<String, Int> = mapOf()
         var nt: NonTerminal? = startSymbol
 
         var currSymbol = SymbolsNode(nt)
         val path = SearchGraphPath<SymbolsNode, RuleEdge>(currSymbol)
 
         while (nt != null) {
+            var vars = globalvars + (currSymbol.localvars ?: mapOf())
             // sample Rule from valid rules
-            val rule = validRules(nt, globalvars + (currSymbol.localvars ?: mapOf())).let { rules ->
+            val rule = validRules(nt, vars).let { rules ->
                 rules.choice(rules.map { it.weight.toDouble() }.toDoubleArray().normalize())
             }
-            currSymbol = currSymbol.createChild(rule)
+            rule.expression?.let {
+                vars = Evaluator.instance().exec(it, vars)
+            }
+            globalvars = vars.filterKeys { it.startsWith("_") }
+            currSymbol = currSymbol.createChild(rule, vars.filterKeys { !it.startsWith("_") })
 
             // SymbolNode will automatically select the next non-terminal to be processed
             nt = currSymbol.currNT
