@@ -59,4 +59,13 @@ class GrammarTest {
 
         //File("out.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
     }
+
+    @Test
+    fun sampleXmlAnnotGram() {
+        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("xml_gen_annot.yaml")?.path!!)
+        val byteseq = grammar.sample()
+        println(byteseq)
+
+        //File("out.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
+    }
 }

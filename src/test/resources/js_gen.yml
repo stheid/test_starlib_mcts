@@ -1,47 +1,47 @@
 gen:
-  - genStmt[i=0]
+  - genStmt
 
 # generateStatement
 # true is || with stmtDepth>=maxStmtDepth
 genStmt[i<6]:
-  - true zero genExpr [del i]
-  - true one [del i] # break
-  - true two [del i] # continue
-  - true three genReturn [del i]
-  - true four genExpr [del i] # throw
-  - true five genIdent [del i] # var
-  - true six [del i] # empty
-  - false zero genIf[i++]
-  - false one genFor[i++]
-  - false two genExpr genBlock[i++] # while
-  - false three genNameFunc[i++]
-  - false four genExpr genCases[i++] # switch
-  - false five genBlock[i++] genIdent genBlock[i++] # try catch
-  - false six genBlock[i++]
+  - [del i] true zero genExpr
+  - [del i] true one # break
+  - [del i] true two # continue
+  - [del i] true three genReturn
+  - [del i] true four genExpr # throw
+  - [del i] true five genIdent # var
+  - [del i] true six # empty
+  - [i+=1] false zero genIf
+  - [i+=1] false one genFor
+  - [i+=1] false two genExpr genBlock # while
+  - [i+=1] false three genNameFunc
+  - [i+=1] false four genExpr genCases # switch
+  - [i+=1] false five genBlock genIdent genBlock # try catch
+  - [i+=1] false six genBlock
 
 genStmt[i==6]:
   - true zero genExpr
   - true one # break
   - true two # continue
-  - true three genReturn [del i]
-  - true four genExpr [del i] # throw
-  - true five genIdent [del i] # var
-  - true six [del i] # empty
+  - true three genReturn
+  - true four genExpr # throw
+  - true five genIdent # var
+  - true six # empty
 
 # generateExpression
 # true is || with exprDepth>=maxExprDepth
 genExpr[j<10]:
   'true zero genLit': 8
   'true one genIdent': 8
-  'false zero int genExpr[j++] genExpr[j++]': 2 # binary
-  'false one int genExpr[j++]': 2 # unary
-  'false two genExpr[j++] genExpr[j++] genExpr[j++]': 2 # ternary
-  'false three genExpr[j++] mean3Expr[j++] bool': 2 # call
-  'false four genFunc[j++]': 2
-  'false five genExpr[j++] genIdent[j++]': 2 # prop
-  'false six genExpr[j++] genExpr[j++]': 2 # idx
-  'false seven mean3Ident[j++] true genBlock': 1 # arrowfunc
-  'false seven mean3Ident[j++] false genExpr': 1 # arrowfunc
+  '[j+=1] false zero int genExpr genExpr': 2 # binary
+  '[j+=1] false one int genExpr': 2 # unary
+  '[j+=1] false two genExpr genExpr genExpr': 2 # ternary
+  '[j+=1] false three genExpr mean3Expr bool': 2 # call
+  '[j+=1] false four genFunc': 2
+  '[j+=1] false five genExpr genIdent': 2 # prop
+  '[j+=1] false six genExpr genExpr': 2 # idx
+  '[j+=1] false seven mean3Ident true genBlock': 1 # arrowfunc
+  '[j+=1] false seven mean3Ident false genExpr': 1 # arrowfunc
 
 genExpr[j==10]:
   - zero genLit
@@ -51,11 +51,11 @@ genReturn:
   - true
   - false genExpr
 
-genIdent[global k<100]:
-  - true int [k++]
+genIdent[_k<100]:
+  - [_k+=1] true int
   - false int
 
-genIdent[global k==100]:
+genIdent[_k==100]:
   - int
 
 genIf:
@@ -98,8 +98,8 @@ genCases:
   '_4geo2 genExpr genBlock genExpr genBlock genExpr genBlock genExpr genBlock': 0.0625
 
 genLit[j<10]:
-  'true true mean3Expr[j]': 1
-  'true false mean3Object[j]': 1
+  'true true mean3Expr': 1
+  'true false mean3Object': 1
   'false nonNestingLit': 2
 
 genLit[j==10]:
