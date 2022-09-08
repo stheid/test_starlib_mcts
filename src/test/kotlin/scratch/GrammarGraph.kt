@@ -35,11 +35,12 @@ data class SimpleNode(override var nodes: Chain<Symbol>) : Node(nodes)
 class ComplexEdge : DefaultEdge()
 
 fun main() {
-    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
+//    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
 //    val grammar = Grammar.fromResource("simple_xml_gen.yml")
+    val grammar = Grammar.fromResource("xml_gen.yaml")
 
     var graph = grammar.toGraph()
-    val exporter = DOTExporter<Node, DefaultEdge> { """"${it.value}"""" }
+    val exporter = DOTExporter<Node, DefaultEdge> { """"${it.value.filter {  it.isLetterOrDigit() }}"""" }
     exporter.setVertexAttributeProvider {
         mutableMapOf<String, Attribute>(
             "color" to DefaultAttribute.createAttribute(if (it is ComplexNode) "red" else "black")
@@ -65,17 +66,21 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
 
     // Example JGraphT code https://jgrapht.org/guide/UserOverview
     val graph = DefaultDirectedGraph<Node, DefaultEdge>(DefaultEdge::class.java)
+//    val nodes = mutableMapOf<String, Node>()
     val nodes = mutableMapOf<String, Node>()
     val complexNodes = mutableMapOf<String, Node>()
+//    val complexNodes = mutableMapOf<String, Node>()
 
     fun Node.addToGraph(keyNode: Node): Node {
         graph.addVertex(this)
         graph.addEdge(keyNode, this)
         return this
     }
-
+    // add all nodes as vertices to graph,
+    // add edges among keys and values in production rules.
     this.prodRules.forEach { (key, vallue) ->
         val nt = NonTerminal(key)
+//        val keyNode = nodes.getOrPut(nt.toString()) {
         val keyNode = nodes.getOrPut(nt.toString()) {
             SimpleNode(Chain(listOf(nt))).apply {
                 graph.addVertex(this)
@@ -88,21 +93,24 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
                 1 -> {
                     val ntVal = value.single().toString()
                     nodes.getOrPut(ntVal) {
+//                    nodes.getOrPut(ntVal) {
                         SimpleNode(Chain(value)).addToGraph(keyNode)
                     }
                 }
                 else -> {
                     complexNodes.getOrPut(value.toString()) {
+//                    complexNodes.getOrPut(value.toString()) {
                         ComplexNode(Chain(value)).addToGraph(keyNode)
                     }
                 }
             }
         }
     }
-
+    // add edges among Non-terminal nodes and complex nodes
     complexNodes.values.forEach { c ->
         c.nodes.filter { it !is Terminal }.forEach {
             graph.addEdge(c, nodes[it.toString()]!!, ComplexEdge())
+//            graph.addEdge(c, nodes[it.toString()]!!, ComplexEdge())
         }
     }
     return graph
