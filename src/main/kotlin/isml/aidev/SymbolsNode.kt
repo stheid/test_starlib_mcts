@@ -40,14 +40,15 @@ class SymbolsNode(
         val newNts = rule.substitution.filterIsInstance<Symbol.NonTerminal>().map { it.copy() }.toList()
         val nextNT = (remainingNTs.toList() + newNts).randomOrNull()
 
-        val newLocalvars = newVars?.filterKeys { !it.startsWith("_") }
-        val updatedGlobalVars = globalvars + (newVars?.filterKeys { it.startsWith("_") } ?: mapOf())
-        val updatedLocalVars = (nextNT?.let {
+        // in case newVars is null because there was no expression executed, we reuse the old local and global vars
+        val newLocalvars = newVars?.filterKeys { !it.startsWith("_") } ?: localvars[currNT]
+        val updatedGlobalVars = newVars?.filterKeys { it.startsWith("_") } ?: globalvars
+        val updatedLocalVars = nextNT?.let {
             HashMap(localvars).apply {
                 remove(currNT)
-                putAll(newNts.associateWith { (localvars[currNT] ?: mapOf()) + (newLocalvars ?: mapOf()) })
+                newLocalvars?.let { x -> putAll(newNts.associateWith { x }) }
             }
-        } ?: mapOf())
+        } ?: mapOf()
 
         return SymbolsNode(
             nextNT,

@@ -56,7 +56,9 @@ class GrammarTest {
     fun sampleAnotatedGlobalGram() {
         val grammar =
             Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_globvar.yaml")?.path!!)
-        assert(grammar.sample().length == 5)
+        val result = grammar.sample()
+        println(result)
+        assert(result.length == 5)
 
         //File("out.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
     }

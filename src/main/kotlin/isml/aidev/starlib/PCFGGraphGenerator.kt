@@ -12,5 +12,5 @@ class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<Symbols
         ISingleRootGenerator { SymbolsNode(grammar.startSymbol) }
 
     override fun getSuccessorGenerator() =
-        PCFGSuccGen(grammar.prodRules)
+        PCFGSuccGen(grammar)
 }

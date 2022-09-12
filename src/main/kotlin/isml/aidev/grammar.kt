@@ -47,7 +47,7 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
         }
     }
 
-    private fun validRules(nt: NonTerminal, vars: Map<String, Int>? = null): List<RuleEdge> {
+    fun validRules(nt: NonTerminal, vars: Map<String, Int>? = null): List<RuleEdge> {
         val ruleAlternatives = prodRules[nt.value] ?: error("Did not find NT ${nt.value}")
         val trueCondition = ruleAlternatives.keys.filterNotNull().singleOrNull { cond ->
             Evaluator.eval(cond, vars)
