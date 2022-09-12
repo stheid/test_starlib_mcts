@@ -7,11 +7,10 @@ import org.api4.java.datastructure.graph.implicit.IGraphGenerator
 import org.api4.java.datastructure.graph.implicit.ISingleRootGenerator
 
 class PCFGGraphGenerator(private val grammar: Grammar) : IGraphGenerator<SymbolsNode, RuleEdge> {
-    private val successorGenerator = PCFGSuccGen(grammar.prodRules)
-
     override fun getRootGenerator() =
+        // during root generation we can create state that exists for the time of one evaluation
         ISingleRootGenerator { SymbolsNode(grammar.startSymbol) }
 
     override fun getSuccessorGenerator() =
-        this.successorGenerator
+        PCFGSuccGen(grammar.prodRules)
 }

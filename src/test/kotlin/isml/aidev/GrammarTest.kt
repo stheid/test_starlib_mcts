@@ -14,6 +14,7 @@ class GrammarTest {
         val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("json_simple_gram.yml")?.path!!)
         println(grammar)
     }
+
     @Test
     fun readSimpleGrammar() {
         val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("abc.yaml")?.path!!)
@@ -22,7 +23,8 @@ class GrammarTest {
 
     @Test
     fun readAnnotGrammar() {
-        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_unconstrained.yaml")?.path!!)
+        val grammar =
+            Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_unconstrained.yaml")?.path!!)
         println(grammar)
     }
 
@@ -35,7 +37,8 @@ class GrammarTest {
 
     @Test
     fun sampleAnotatedGram() {
-        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_unconstrained.yaml")?.path!!)
+        val grammar =
+            Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_unconstrained.yaml")?.path!!)
         val byteseq = grammar.sample()
         println(byteseq)
 
@@ -44,18 +47,16 @@ class GrammarTest {
 
     @Test
     fun sampleAnotatedLocalGram() {
-        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_localvar.yaml")?.path!!)
-        val byteseq = grammar.sample()
-        println(byteseq)
-
-        //File("out.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
+        val grammar =
+            Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_localvar.yaml")?.path!!)
+        assert(grammar.sample() == "133355555")
     }
 
     @Test
     fun sampleAnotatedGlobalGram() {
-        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_globvar.yaml")?.path!!)
-        val byteseq = grammar.sample()
-        println(byteseq)
+        val grammar =
+            Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_globvar.yaml")?.path!!)
+        assert(grammar.sample().length == 5)
 
         //File("out.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
     }

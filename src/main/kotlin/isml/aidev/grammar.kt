@@ -47,10 +47,10 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
         }
     }
 
-    fun validRules(nt: NonTerminal, vars: Map<String, Int>? = null): List<RuleEdge> {
+    private fun validRules(nt: NonTerminal, vars: Map<String, Int>? = null): List<RuleEdge> {
         val ruleAlternatives = prodRules[nt.value] ?: error("Did not find NT ${nt.value}")
         val trueCondition = ruleAlternatives.keys.filterNotNull().singleOrNull { cond ->
-            Evaluator.instance().eval(cond, vars)
+            Evaluator.eval(cond, vars)
         }
         if (trueCondition !in ruleAlternatives)
             error("more or less than one production rule with a fulfilled condition. (${nt.value}")
@@ -58,23 +58,17 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
     }
 
     fun sample(): String {
-        var globalvars: Map<String, Int> = mapOf()
         var nt: NonTerminal? = startSymbol
 
         var currSymbol = SymbolsNode(nt)
         val path = SearchGraphPath<SymbolsNode, RuleEdge>(currSymbol)
 
         while (nt != null) {
-            var vars = globalvars + (currSymbol.localvars ?: mapOf())
             // sample Rule from valid rules
-            val rule = validRules(nt, vars).let { rules ->
+            val rule = validRules(nt, currSymbol.vars(nt)).let { rules ->
                 rules.choice(rules.map { it.weight.toDouble() }.toDoubleArray().normalize())
             }
-            rule.expression?.let {
-                vars = Evaluator.instance().exec(it, vars)
-            }
-            globalvars = vars.filterKeys { it.startsWith("_") }
-            currSymbol = currSymbol.createChild(rule, vars.filterKeys { !it.startsWith("_") })
+            currSymbol = currSymbol.createChild(rule)
 
             // SymbolNode will automatically select the next non-terminal to be processed
             nt = currSymbol.currNT

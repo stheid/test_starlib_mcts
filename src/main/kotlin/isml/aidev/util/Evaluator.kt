@@ -8,11 +8,7 @@ import org.python.modules._collections.PyDefaultDict
 import org.python.util.PythonInterpreter
 
 
-class Evaluator private constructor() {
-    companion object {
-        fun instance() = Evaluator()
-    }
-
+object Evaluator {
     private val interp = PythonInterpreter().apply {
         exec("from collections import defaultdict")
     }

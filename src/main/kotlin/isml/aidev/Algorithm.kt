@@ -27,13 +27,15 @@ class Algorithm(
     private lateinit var solution: EvaluatedSearchGraphPath<SymbolsNode, RuleEdge, Double>
 
     init {
+        // construct a search problem that is in alignment to the graphgenerator and so on
         val rawInput = PCFGSearchInput(
             // parse grammar to object representation of the grammar
             Grammar.fromFile(grammarPath)
         )
 
-        // create a version with costs
-        val input = GraphSearchWithPathEvaluationsInput(rawInput) {
+        // create attach an evaluator to it
+        val problem = GraphSearchWithPathEvaluationsInput(rawInput) {
+            // this function is executed after each input sampled through the MCTS
             runBlocking {
                 inputChannel.send(it.toWord().toByteArray())
                 covChannel.receive()
@@ -51,7 +53,7 @@ class Algorithm(
             )
         }
         uct.withMaxIterations(maxIterations)
-        val mcts = factory.withMCTSFactory(uct).withProblem(input).algorithm
+        val mcts = factory.withMCTSFactory(uct).withProblem(problem).algorithm
 
         if (!headless) {
             val window = AlgorithmVisualizationWindow(mcts)
