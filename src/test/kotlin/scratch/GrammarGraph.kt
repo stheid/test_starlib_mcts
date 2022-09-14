@@ -160,7 +160,7 @@ fun <V, E> DefaultDirectedGraph<V, E>.succs(vert: V): MutableList<V> {
     return Graphs.successorListOf(this, vert)!!
 }
 
-private fun <Node, DefaultEdge> DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirectedGraph<Node, DefaultEdge> {
+private fun <N : Node> DefaultDirectedGraph<N, DefaultEdge>.simplify(): DefaultDirectedGraph<N, DefaultEdge> {
     val nodesToProcess = vertexSet().toMutableList()
 
     while (nodesToProcess.isNotEmpty()) {
@@ -191,7 +191,7 @@ private fun <Node, DefaultEdge> DefaultDirectedGraph<Node, DefaultEdge>.simplify
                         // pred         -> node -> succ
                         // predecessor is a complex node
                         // modify pred to point to succ
-                        addEdge(pred, succ, ComplexEdge() as DefaultEdge)
+                        addEdge(pred, succ, ComplexEdge())
                         // modify the internal value of the predecessor according to the succ
 
                         removeVertex(node)
