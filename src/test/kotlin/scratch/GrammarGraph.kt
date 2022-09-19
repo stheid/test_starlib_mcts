@@ -32,15 +32,17 @@ open class Node(open var nodes: Chain<Symbol>) {
     }
 }
 
+// ComplexNode can contain multiple terminals and non-terminals
 data class ComplexNode(override var nodes: Chain<Symbol>) : Node(nodes)
+// SimpleNodes contain either a single non-terminal or a list of terminals
 data class SimpleNode(override var nodes: Chain<Symbol>) : Node(nodes)
 
 class ComplexEdge : DefaultEdge()
 
 fun main() {
-//    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
+    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
 //    val grammar = Grammar.fromResource("json_simple_gram.yml")
-    val grammar = Grammar.fromResource("simple_xml_gen.yml")
+//    val grammar = Grammar.fromResource("simple_xml_gen.yml")
 //    val grammar = Grammar.fromResource("xml_gen.yaml")
 
     var graph = grammar.toGraph()
@@ -58,7 +60,7 @@ fun main() {
         )
     }
 
-    exporter.exportGraph(graph, File("grammar_raw.dot").bufferedWriter())
+//    exporter.exportGraph(graph, File("grammar_raw.dot").bufferedWriter())
     graph = graph.simplify()
     println(graph)
     exporter.exportGraph(graph, File("grammar_simple.dot").bufferedWriter())
@@ -196,29 +198,27 @@ private fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirectedG
                         && succ is SimpleNode
                         && succ.nodes.all { it is Terminal }
                     ) {
-                        // complex node -> NT -> Terminal
-                        // pred         -> node -> succ
-                        // predecessor is a complex node
+                        // child node of a complex node must always SimpleNode with only one non-terminal
+                        // pred (ComplexNode) -> node (SimpleNode) -> succ (SimpleNode: only terminals)
                         // modify pred to point to succ
                         addEdge(pred, succ, ComplexEdge())
-                        // modify the internal value of the predecessor according to the succ
-
                         removeVertex(node)
-                        // todo: After above simplification, check if complex node points to only terminals and then remove them.
 
-                        // remove this succ
-                        // and update complexnode
-                        // get node that we need to modify
-                        val oldNT = node.nodes.single()
+                        // remove this succ and update ComplexNode
+                        val oldNT = node.nodes.single() // The Non-terminal
+                        // find the chain link in "pred" containing this non-terminal
                         val link = pred.nodes.linkIterator().asSequence()
                             .single { it.value.toString() == oldNT.toString() }
+                        // replace the non-terminal with all terminals from "succ" and remove the "succ"
                         pred.nodes.replace(link, succ.nodes)
                         removeVertex(succ)
 
+                        // Special case: if pred (the ComplexNode) contains only terminals we convert it to a SimpleNode
                         if (pred.nodes.all { it is Terminal }) {
                             val newNode = SimpleNode(pred.nodes) as Node
 
                             addVertex(newNode)
+                            // eliminate "pred" by letting its predecessors point to "newNode"
                             preds(pred).forEach {
                                 addEdge(it, newNode)
                             }
