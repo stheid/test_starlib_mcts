@@ -36,9 +36,10 @@ data class SimpleNode(override var nodes: Chain<Symbol>) : Node(nodes)
 class ComplexEdge : DefaultEdge()
 
 fun main() {
-    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
+//    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
+    val grammar = Grammar.fromResource("json_gram.yml")
 //    val grammar = Grammar.fromResource("simple_xml_gen.yml")
-    //   val grammar = Grammar.fromResource("xml_gen.yaml")
+//    val grammar = Grammar.fromResource("xml_gen.yaml")
 
     var graph = grammar.toGraph()
     val exporter = DOTExporter<Node, DefaultEdge> { """"${it.value.filter { it.isLetterOrDigit() }}"""" }
@@ -64,6 +65,7 @@ fun main() {
 
 
 fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
+
     // Example JGraphT code https://jgrapht.org/guide/UserOverview
     val graph = DefaultDirectedGraph<Node, DefaultEdge>(DefaultEdge::class.java)
     val nodes = mutableMapOf<String, Node>()
