@@ -11,7 +11,7 @@ class GrammarGraphTest {
     fun nodeTest() {
         val grammar = Grammar.fromResource("extremely_simple_gram.yml")
         val node1 = Node(Chain(listOf(grammar.startSymbol)))
-        println(node1.value)
+        println(node1.toString())
     }
 
     @Test
