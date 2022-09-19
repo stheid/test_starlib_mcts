@@ -13,6 +13,8 @@ import org.jgrapht.nio.Attribute
 import org.jgrapht.nio.DefaultAttribute
 import org.jgrapht.nio.dot.DOTExporter
 import java.io.File
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 open class Node(open var nodes: Chain<Symbol>) {
     val value: String
@@ -37,12 +39,14 @@ class ComplexEdge : DefaultEdge()
 
 fun main() {
 //    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
-    val grammar = Grammar.fromResource("json_gram.yml")
-//    val grammar = Grammar.fromResource("simple_xml_gen.yml")
+//    val grammar = Grammar.fromResource("json_simple_gram.yml")
+    val grammar = Grammar.fromResource("simple_xml_gen.yml")
 //    val grammar = Grammar.fromResource("xml_gen.yaml")
 
     var graph = grammar.toGraph()
-    val exporter = DOTExporter<Node, DefaultEdge> { """"${it.value.filter { it.isLetterOrDigit() }}"""" }
+//    val exporter = DOTExporter<Node, DefaultEdge> { """"${URLEncoder.encode(it.value, StandardCharsets.UTF_8)}"""" }
+//    val exporter = DOTExporter<Node, DefaultEdge> { """"${it.value.filter {  it.isLetterOrDigit() }}"""" }
+    val exporter = DOTExporter<Node, DefaultEdge> { """"${it.value}"""" }
     exporter.setVertexAttributeProvider {
         mutableMapOf<String, Attribute>(
             "color" to DefaultAttribute.createAttribute(if (it is ComplexNode) "red" else "black")
@@ -89,6 +93,9 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
         vallue.forEach {
             val value = it.substitution
             when (value.size) {
+                0 -> {
+
+                }
                 1 -> {
                     val ntVal = value.single().toString()
                     nodes.getOrPut(ntVal) {
@@ -162,7 +169,7 @@ fun <V, E> DefaultDirectedGraph<V, E>.succs(vert: V): MutableList<V> {
     return Graphs.successorListOf(this, vert)!!
 }
 
-private fun <N : Node> DefaultDirectedGraph<N, DefaultEdge>.simplify(): DefaultDirectedGraph<N, DefaultEdge> {
+private fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirectedGraph<Node, DefaultEdge> {
     val nodesToProcess = vertexSet().toMutableList()
 
     while (nodesToProcess.isNotEmpty()) {
