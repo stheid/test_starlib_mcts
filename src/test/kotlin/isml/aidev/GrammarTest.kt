@@ -1,6 +1,7 @@
 package isml.aidev
 
 import org.junit.jupiter.api.Test
+import java.io.File
 
 class GrammarTest {
     @Test
@@ -39,8 +40,10 @@ class GrammarTest {
     fun sampleAnotatedGram() {
         val grammar =
             Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_unconstrained.yaml")?.path!!)
-        val byteseq = grammar.sample()
-        println(byteseq)
+        println(grammar.sample())
+        for (i in 1..100){
+            println(grammar.sample())
+        }
 
         //File("out.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
     }
@@ -50,6 +53,9 @@ class GrammarTest {
         val grammar =
             Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_localvar.yaml")?.path!!)
         assert(grammar.sample() == "133355555")
+        for (i in 1..100){
+            println(grammar.sample())
+        }
     }
 
     @Test
@@ -59,6 +65,9 @@ class GrammarTest {
         val result = grammar.sample()
         println(result)
         assert(result.length == 5)
+        for (i in 1..100){
+            println(grammar.sample())
+        }
 
         //File("out.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
     }
@@ -66,9 +75,10 @@ class GrammarTest {
     @Test
     fun sampleXmlAnnotGram() {
         val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("xml_gen_annot.yaml")?.path!!)
-        val byteseq = grammar.sample()
-        println(byteseq)
+        for (i in 1..500){
+            val byteseq = grammar.sample()
+//            File("annotated/$i.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
+        }
 
-        //File("out.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
     }
 }
