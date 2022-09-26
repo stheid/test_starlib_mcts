@@ -79,6 +79,15 @@ class GrammarTest {
             val byteseq = grammar.sample()
 //            File("annotated/$i.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
         }
+    }
 
+    @Test
+    fun sampleJsAnnotatedGram() {
+        val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("js_gen.yml")?.path!!)
+        for (i in 1..100){
+            val byteseq = grammar.sample()
+            print(byteseq)
+//            File("annotated/$i.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
+        }
     }
 }
