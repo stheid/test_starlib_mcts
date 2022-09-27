@@ -4,20 +4,20 @@ gen:
 # generateStatement
 # true is || with stmtDepth>=maxStmtDepth
 genStmt[i<6]:
-  - [del i] true zero genExpr
-  - [del i] true one # break
-  - [del i] true two # continue
-  - [del i] true three genReturn
-  - [del i] true four genExpr # throw
-  - [del i] true five genIdent # var
-  - [del i] true six # empty
-  - [i+=1] false zero genIf
-  - [i+=1] false one genFor
-  - [i+=1] false two genExpr genBlock # while
-  - [i+=1] false three genNameFunc
-  - [i+=1] false four genExpr genCases # switch
-  - [i+=1] false five genBlock genIdent genBlock # try catch
-  - [i+=1] false six genBlock
+  - '[del i] true zero genExpr'
+  - '[del i] true one' # break
+  - '[del i] true two' # continue
+  - '[del i] true three genReturn'
+  - '[del i] true four genExpr' # throw
+  - '[del i] true five genIdent' # var
+  - '[del i] true six' # empty
+  - '[i+=1] false zero genIf'
+  - '[i+=1] false one genFor'
+  - '[i+=1] false two genExpr genBlock' # while
+  - '[i+=1] false three genNameFunc'
+  - '[i+=1] false four genExpr genCases' # switch
+  - '[i+=1] false five genBlock genIdent genBlock' # try catch
+  - '[i+=1] false six genBlock'
 
 genStmt[i==6]:
   - true zero genExpr
@@ -52,7 +52,7 @@ genReturn:
   - false genExpr
 
 genIdent[_k<100]:
-  - [_k+=1] true int
+  - '[_k+=1] true int'
   - false int
 
 genIdent[_k==100]:
