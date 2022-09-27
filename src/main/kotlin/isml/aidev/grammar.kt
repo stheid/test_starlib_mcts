@@ -45,6 +45,10 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
 
             return Grammar(NonTerminal(grammar.entries.first().key), grammar)
         }
+
+        fun fromResource(path: String): Grammar {
+           return fromFile(this::class.java.classLoader.getResource(path)?.path!!)
+        }
     }
 
     fun validRules(nt: NonTerminal, vars: Map<String, Int>? = null): List<RuleEdge> {
