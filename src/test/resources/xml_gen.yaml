@@ -101,12 +101,14 @@ makeAlphaString:
 
 makeDictString:
   # For the ant.dict
-  - '"\x00" . "\x74"'
+  - '"\x11"'
+#  - '"\x00" . "\x74"'
   # for the mvn.dict
   # '"\x00" . "\x8c"': 1
 
 byte:
-  - '"\x00" . "\xFF"'
+#  - '"\x00" . "\xFF"'
+  - '"\x10"'
 
 boolTrue:
   - '"\x01"'
