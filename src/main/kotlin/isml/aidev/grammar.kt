@@ -41,7 +41,7 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
                     })
             }.groupBy { (NT, _, _) -> NT }.entries.associate { (NT, group) ->
                 NT to group.associate { (_, cond, rules) -> cond to rules }
-            }//.simplify()*/
+            }//.simplify()
 
             return Grammar(NonTerminal(grammar.entries.first().key), grammar)
         }
@@ -82,28 +82,6 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
     }
 }
 
-/*
-private fun Map<String, List<RuleEdge>>.simplify(): Map<String, List<RuleEdge>> {
-    // TODO
-
-    // find simple NT->[[term+]] rules, so basically non-terminals that are only part of one single rule that is made up entirely by terminals
-    val groups = this.entries
-        .groupBy { (_, value) -> value.size == 1 && value[0].substitution.all { it is Terminal } }.entries
-        .associate { it.key to it.value.associate { (k, v) -> k to v } }
-    val complex = groups[false] ?: emptyMap()
-    val simple = groups[true] ?: emptyMap()
-
-    val simpleSub = simple.entries.associate { it.key to it.value.single().substitution }
-
-    // substitute uses of this NTs in other rules
-    return complex.entries.associate { (key, value) ->
-        key to value.map { rule ->
-            val newSubs = rule.substitution.flatMap { simpleSub[it.value] ?: listOf(it) }
-            RuleEdge(newSubs, rule.weight)
-        }
-    }
-}
-*/
 
 private fun YamlNode.parseRule(): Map<String, Float> {
     return if (this is YamlList) this.yamlList.items.associate { it.yamlScalar.content to 1.0f }

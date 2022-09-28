@@ -1,22 +1,15 @@
-package scratch
-
-import isml.aidev.Grammar
-import isml.aidev.RuleEdge
-import isml.aidev.Symbol
+package isml.aidev
 import isml.aidev.Symbol.NonTerminal
 import isml.aidev.Symbol.Terminal
 import isml.aidev.util.Chain
 import org.jgrapht.Graphs
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
-import org.jgrapht.nio.Attribute
-import org.jgrapht.nio.DefaultAttribute
-import org.jgrapht.nio.dot.DOTExporter
-import java.io.File
 
 open class Node(open val nodes: Chain<Symbol>?)
 
 // ConditionalNode can contain non-terminals based on conditions in annotated grammar
+// Mustn't be a dataclass since there could be nts with the same condition
 class ConditionalNode(val cond: String?, override val nodes: Chain<Symbol>? = null) : Node(nodes)
 
 // ComplexNode can contain multiple terminals and non-terminals
@@ -42,60 +35,10 @@ data class SimpleNode(override val nodes: Chain<Symbol>?) : Node(nodes) {
 class ComplexEdge : DefaultEdge()
 class CondEdge : DefaultEdge()
 
-fun createExporter(): DOTExporter<Node, DefaultEdge> {
-    val exporter = DOTExporter<Node, DefaultEdge> {
-        when (it) {
-            is ConditionalNode -> """"${it.cond ?: it.hashCode()}""""
 
-            else -> """"${
-                if (it.nodes == null) it.hashCode() else
-                    it.nodes.toString().filter { it.isLetterOrDigit() }
-            }""""
-        }
-    }
+fun ProdRules.simplify(): ProdRules = this.toGraph().simplify().toProdRules()
 
-    exporter.setVertexAttributeProvider {
-        mutableMapOf<String, Attribute>(
-            "color" to DefaultAttribute.createAttribute(
-                when (it) {
-                    is ComplexNode -> "red"
-                    is ConditionalNode -> "blue"
-                    else -> "black"
-                }
-            )
-        )
-    }
-    exporter.setEdgeAttributeProvider {
-        mutableMapOf<String, Attribute>(
-            "color" to DefaultAttribute.createAttribute(
-                when (it) {
-                    is ComplexEdge -> "red"
-                    is CondEdge -> "blue"
-                    else -> "black"
-                }
-            )
-        )
-    }
-    return exporter
-}
-
-fun main() {
-    val grammar = Grammar.fromResource("simple_annotated_globvar.yaml")
-//    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
-    println(grammar)
-    var graph = grammar.toGraph()
-//    val exporter = DOTExporter<Node, DefaultEdge> { """"${URLEncoder.encode(it.value, StandardCharsets.UTF_8)}"""" }
-
-    createExporter().exportGraph(graph, File("grammar_raw.dot").bufferedWriter())
-    graph = graph.simplify()
-    createExporter().exportGraph(graph, File("grammar_simple.dot").bufferedWriter())
-
-    val simplegrammar = Grammar.fromGraph(graph)
-    println(simplegrammar)
-}
-
-
-fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
+private fun ProdRules.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
     // Example JGraphT code https://jgrapht.org/guide/UserOverview
     val graph = DefaultDirectedGraph<Node, DefaultEdge>(DefaultEdge::class.java)
     val nodes = mutableMapOf<String, Node>()
@@ -109,7 +52,7 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
 
     // add all nodes as vertices to graph,
     // add edges among keys and values in production rules.
-    this.prodRules.forEach { (nt_key, cond_ruleEdges) ->
+    this.forEach { (nt_key, cond_ruleEdges) ->
         val nt = NonTerminal(nt_key)
         val keyNode = nodes.getOrPut(nt.toString()) {
             SimpleNode(Chain(listOf(nt))).apply {
@@ -160,9 +103,8 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
 }
 
 
-private fun Grammar.Companion.fromGraph(graph: DefaultDirectedGraph<Node, DefaultEdge>): Grammar? {
-    val startsymbol = graph.vertexSet().toList()[0].nodes?.first?.value?.let { NonTerminal(it.value) }
-    val grammar = mutableMapOf<String, MutableMap<String?, MutableList<RuleEdge>>>()
+private fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(): ProdRules {
+    val prodrules = mutableMapOf<String, MutableMap<String?, MutableList<RuleEdge>>>()
 
     fun createRules(nt: String, successors: MutableList<Node>, cond: String? = null) {
         successors.forEach { succ ->
@@ -174,7 +116,8 @@ private fun Grammar.Companion.fromGraph(graph: DefaultDirectedGraph<Node, Defaul
                     is Terminal -> substitution.add(Terminal(it_sn.value))
                 }
             }
-            grammar.getOrPut(nt) {
+
+            prodrules.getOrPut(nt) {
                 // in case the non-terminal has not been added to the grammar yet
                 mutableMapOf()
             }// for that NT
@@ -187,28 +130,28 @@ private fun Grammar.Companion.fromGraph(graph: DefaultDirectedGraph<Node, Defaul
 
     // iterate over all simple nodes and conditional nodes. Simple nodes with conditions are filtered,
     // such that every rule is only processed exactly once
-    graph.vertexSet()
+    this.vertexSet()
         .filter { it !is ComplexNode }
         .forEach {
-            val succs = graph.succs(it)
-            if (it !is ConditionalNode && !graph.succs(it).any { it_ -> it_ is ConditionalNode }) {
+            val succs = this.succs(it)
+            if (it !is ConditionalNode && !this.succs(it).any { it_ -> it_ is ConditionalNode }) {
                 // SimpleNodes (with no condition): create rules from non-terminal to the rule substitutions
-                createRules(it.toString(), succs)
+                createRules(it.nodes?.first?.value?.value.toString(), succs)
             } else if (it is ConditionalNode) {
                 // ConditionalNodes: create rules from its non-terminal to the rule substitutions
-                val nt = graph.preds(it).single().toString()
+                val nt = this.preds(it).single().nodes?.first?.value?.value.toString()
                 createRules(nt, succs, it.cond)
             }
         }
 
-    return startsymbol?.let { Grammar(it, grammar) }
+    return prodrules
 }
 
-fun <V, E> DefaultDirectedGraph<V, E>.preds(vert: V): MutableList<V> {
+private fun <V, E> DefaultDirectedGraph<V, E>.preds(vert: V): MutableList<V> {
     return Graphs.predecessorListOf(this, vert)!!
 }
 
-fun <V, E> DefaultDirectedGraph<V, E>.succs(vert: V): MutableList<V> {
+private fun <V, E> DefaultDirectedGraph<V, E>.succs(vert: V): MutableList<V> {
     return Graphs.successorListOf(this, vert)!!
 }
 
