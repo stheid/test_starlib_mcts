@@ -18,6 +18,8 @@ import java.nio.charset.StandardCharsets
 
 open class Node(open val nodes: Chain<Symbol>?)
 
+// ConditionalNode can contain non-terminals based on conditions in annotated grammar
+data class ConditionalNode(val cond: String?, override val nodes: Chain<Symbol>?) : Node(nodes)
 // ComplexNode can contain multiple terminals and non-terminals
 data class ComplexNode(override val nodes: Chain<Symbol>?) : Node(nodes)
 // SimpleNodes contain either a single non-terminal or a list of terminals
@@ -38,9 +40,11 @@ data class SimpleNode(override val nodes: Chain<Symbol>?) : Node(nodes){
 }
 
 class ComplexEdge : DefaultEdge()
+class ConditionalEdge(val cond: String?) : DefaultEdge()
 
 fun main() {
-    val grammar = Grammar.fromResource("json_gram.yml")
+//    val grammar = Grammar.fromResource("simple_annotated_grammargraph.yaml")
+    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
 
     var graph = grammar.toGraph()
 //    val exporter = DOTExporter<Node, DefaultEdge> { """"${URLEncoder.encode(it.value, StandardCharsets.UTF_8)}"""" }
@@ -63,8 +67,8 @@ fun main() {
     println(graph)
 //    exporter.exportGraph(graph, File("grammar_simple.dot").bufferedWriter())
 
-    val simplegrammar = Grammar.fromGraph(graph)
-    println(simplegrammar)
+//    val simplegrammar = Grammar.fromGraph(graph)
+//    println(simplegrammar)
 }
 
 
@@ -82,30 +86,33 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
     }
     // add all nodes as vertices to graph,
     // add edges among keys and values in production rules.
-    this.prodRules.forEach { (key, vallue) ->
-        val nt = NonTerminal(key)
+    this.prodRules.forEach { (nt_key, cond_ruleEdges) ->
+        val nt = NonTerminal(nt_key)
         val keyNode = nodes.getOrPut(nt.toString()) {
             SimpleNode(Chain(listOf(nt))).apply {
                 graph.addVertex(this)
             }
         }
+        cond_ruleEdges.forEach { (cond, ruleEdges) ->
+            if (cond == null){
+                ruleEdges.forEach{
+                    val value = it.substitution
+                    when (value.size) {
+                        0 -> {
+                            SimpleNode(null).addToGraph(keyNode)
+                        }
+                        1 -> {
+                            val ntVal = value.single().toString()
+                            nodes.getOrPut(ntVal) {
+                                SimpleNode(Chain(value)).addToGraph(keyNode)
+                            }
+                        }
 
-        vallue.forEach {
-            val value = it.substitution
-            when (value.size) {
-                0 -> {
-                    SimpleNode(null).addToGraph(keyNode)
-                }
-                1 -> {
-                    val ntVal = value.single().toString()
-                    nodes.getOrPut(ntVal) {
-                        SimpleNode(Chain(value)).addToGraph(keyNode)
-                    }
-                }
-
-                else -> {
-                    complexNodes.getOrPut(value.toString()) {
-                        ComplexNode(Chain(value)).addToGraph(keyNode)
+                        else -> {
+                            complexNodes.getOrPut(value.toString()) {
+                                ComplexNode(Chain(value)).addToGraph(keyNode)
+                            }
+                        }
                     }
                 }
             }
@@ -121,45 +128,45 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
 }
 
 
-private fun Grammar.Companion.fromGraph(graph: DefaultDirectedGraph<Node, DefaultEdge>): Grammar? {
-    val startsymbol = graph.vertexSet().toList()[0].nodes?.first?.value?.let { NonTerminal(it.value) }
-    val grammar = mutableMapOf<String, MutableList<RuleEdge>>()
+//private fun Grammar.Companion.fromGraph(graph: DefaultDirectedGraph<Node, DefaultEdge>): Grammar? {
+//    val startsymbol = graph.vertexSet().toList()[0].nodes?.first?.value?.let { NonTerminal(it.value) }
+//    val grammar = mutableMapOf<String, MutableList<RuleEdge>>()
 
-    graph.vertexSet()
-        .filter { it !is ComplexNode }
-        .forEach {
-            val succs = graph.succs(it)
-            succs.forEach { succ ->
-                val symbols = mutableListOf<Symbol>()
-                if (succ is ComplexNode) {
-                    succ.nodes?.forEach { it_sn ->
-                        if (it_sn is NonTerminal) {
-                            symbols.add(NonTerminal(it_sn.value))
-                        } else if (it_sn is Terminal) {
-                            symbols.add(Terminal(it_sn.value))
-                        }
-                    }
-                } else { // simple node has only one value anyway
-                    val myNode = succ.nodes?.first?.value
-                    if (myNode != null) {
-                        if (myNode is NonTerminal) {
-                            symbols.add(NonTerminal(myNode.value))
-                        } else {
-                            symbols.add(Terminal(myNode.value))
-                        }
-                    }
-                }
-                val redge = RuleEdge(substitution = symbols, weight = 1.0F)
-                if (it.toString() in grammar.keys) {
-                    grammar[it.toString()]?.add(redge)
-                } else {
-                    grammar[it.toString()] = mutableListOf(redge)
-                }
-            }
-        }
+//    graph.vertexSet()
+//        .filter { it !is ComplexNode }
+//        .forEach {
+//            val succs = graph.succs(it)
+//            succs.forEach { succ ->
+//                val symbols = mutableListOf<Symbol>()
+//                if (succ is ComplexNode) {
+//                    succ.nodes?.forEach { it_sn ->
+//                        if (it_sn is NonTerminal) {
+//                            symbols.add(NonTerminal(it_sn.value))
+//                        } else if (it_sn is Terminal) {
+//                            symbols.add(Terminal(it_sn.value))
+//                        }
+//                    }
+//                } else { // simple node has only one value anyway
+//                    val myNode = succ.nodes?.first?.value
+//                    if (myNode != null) {
+//                        if (myNode is NonTerminal) {
+//                            symbols.add(NonTerminal(myNode.value))
+//                        } else {
+//                            symbols.add(Terminal(myNode.value))
+//                        }
+//                    }
+//                }
+//                val redge = RuleEdge(substitution = symbols, weight = 1.0F)
+//                if (it.toString() in grammar.keys) {
+//                    grammar[it.toString()]?.add(redge)
+//                } else {
+//                    grammar[it.toString()] = mutableListOf(redge)
+//                }
+//            }
+//        }
 
-    return startsymbol?.let { Grammar(it, grammar) }
-}
+//    return startsymbol?.let { Grammar(it, grammar) }
+//}
 
 fun <V, E> DefaultDirectedGraph<V, E>.preds(vert: V): MutableList<V> {
     return Graphs.predecessorListOf(this, vert)!!
