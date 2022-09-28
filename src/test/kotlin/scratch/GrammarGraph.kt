@@ -6,6 +6,7 @@ import isml.aidev.Symbol
 import isml.aidev.Symbol.NonTerminal
 import isml.aidev.Symbol.Terminal
 import isml.aidev.util.Chain
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.jgrapht.Graphs
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
@@ -13,17 +14,17 @@ import org.jgrapht.nio.Attribute
 import org.jgrapht.nio.DefaultAttribute
 import org.jgrapht.nio.dot.DOTExporter
 import java.io.File
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 open class Node(open val nodes: Chain<Symbol>?)
 
 // ConditionalNode can contain non-terminals based on conditions in annotated grammar
 data class ConditionalNode(val cond: String?, override val nodes: Chain<Symbol>?) : Node(nodes)
+
 // ComplexNode can contain multiple terminals and non-terminals
 data class ComplexNode(override val nodes: Chain<Symbol>?) : Node(nodes)
+
 // SimpleNodes contain either a single non-terminal or a list of terminals
-data class SimpleNode(override val nodes: Chain<Symbol>?) : Node(nodes){
+data class SimpleNode(override val nodes: Chain<Symbol>?) : Node(nodes) {
     override fun hashCode(): Int = nodes?.hashCode() ?: super.hashCode()
 
     override fun equals(other: Any?): Boolean {
@@ -40,50 +41,73 @@ data class SimpleNode(override val nodes: Chain<Symbol>?) : Node(nodes){
 }
 
 class ComplexEdge : DefaultEdge()
-class ConditionalEdge(val cond: String?) : DefaultEdge()
+class CondEdge : DefaultEdge()
 
-fun main() {
-//    val grammar = Grammar.fromResource("simple_annotated_grammargraph.yaml")
-    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
+fun createExporter(): DOTExporter<Node, DefaultEdge> {
+    val exporter = DOTExporter<Node, DefaultEdge> {
+        when (it) {
+            is ConditionalNode -> """"${it.cond ?: it.hashCode()}""""
 
-    var graph = grammar.toGraph()
-//    val exporter = DOTExporter<Node, DefaultEdge> { """"${URLEncoder.encode(it.value, StandardCharsets.UTF_8)}"""" }
-    val exporter = DOTExporter<Node, DefaultEdge> { """"${if(it.nodes == null) it.hashCode() else 
-        it.nodes.toString().filter { it.isLetterOrDigit() }}"""" }
+            else -> """"${
+                if (it.nodes == null) it.hashCode() else
+                    it.nodes.toString().filter { it.isLetterOrDigit() }
+            }""""
+        }
+    }
 
     exporter.setVertexAttributeProvider {
         mutableMapOf<String, Attribute>(
-            "color" to DefaultAttribute.createAttribute(if (it is ComplexNode) "red" else "black")
+            "color" to DefaultAttribute.createAttribute(
+                when (it) {
+                    is ComplexNode -> "red"
+                    is ConditionalNode -> "blue"
+                    else -> "black"
+                }
+            )
         )
     }
     exporter.setEdgeAttributeProvider {
         mutableMapOf<String, Attribute>(
-            "color" to DefaultAttribute.createAttribute(if (it is ComplexEdge) "red" else "black")
+            "color" to DefaultAttribute.createAttribute(
+                when (it) {
+                    is ComplexEdge -> "red"
+                    is CondEdge -> "blue"
+                    else -> "black"
+                }
+            )
         )
     }
+    return exporter
+}
 
-    exporter.exportGraph(graph, File("grammar_raw.dot").bufferedWriter())
+fun main() {
+    val grammar = Grammar.fromResource("simple_annotated_grammargraph.yaml")
+//    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
+
+    var graph = grammar.toGraph()
+//    val exporter = DOTExporter<Node, DefaultEdge> { """"${URLEncoder.encode(it.value, StandardCharsets.UTF_8)}"""" }
+
+    createExporter().exportGraph(graph, File("grammar_raw.dot").bufferedWriter())
     graph = graph.simplify()
-    println(graph)
-//    exporter.exportGraph(graph, File("grammar_simple.dot").bufferedWriter())
+    createExporter().exportGraph(graph, File("grammar_simple.dot").bufferedWriter())
 
-//    val simplegrammar = Grammar.fromGraph(graph)
-//    println(simplegrammar)
+    val simplegrammar = Grammar.fromGraph(graph)
+    println(simplegrammar)
 }
 
 
 fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
-
     // Example JGraphT code https://jgrapht.org/guide/UserOverview
     val graph = DefaultDirectedGraph<Node, DefaultEdge>(DefaultEdge::class.java)
     val nodes = mutableMapOf<String, Node>()
     val complexNodes = mutableMapOf<String, Node>()
 
-    fun Node.addToGraph(keyNode: Node): Node {
+    fun Node.addAsChildOf(parent: Node, EdgeType: DefaultEdge = DefaultEdge()): Node {
         graph.addVertex(this)
-        graph.addEdge(keyNode, this)
+        graph.addEdge(parent, this, EdgeType)
         return this
     }
+
     // add all nodes as vertices to graph,
     // add edges among keys and values in production rules.
     this.prodRules.forEach { (nt_key, cond_ruleEdges) ->
@@ -93,25 +117,34 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
                 graph.addVertex(this)
             }
         }
-        cond_ruleEdges.forEach { (cond, ruleEdges) ->
-            if (cond == null){
-                ruleEdges.forEach{
-                    val value = it.substitution
-                    when (value.size) {
-                        0 -> {
-                            SimpleNode(null).addToGraph(keyNode)
-                        }
-                        1 -> {
-                            val ntVal = value.single().toString()
-                            nodes.getOrPut(ntVal) {
-                                SimpleNode(Chain(value)).addToGraph(keyNode)
-                            }
-                        }
 
-                        else -> {
-                            complexNodes.getOrPut(value.toString()) {
-                                ComplexNode(Chain(value)).addToGraph(keyNode)
-                            }
+        val nAlternatives = cond_ruleEdges.size
+
+        cond_ruleEdges.forEach { (cond, ruleEdges) ->
+            // if there are multiple options we need to create conditional Nodes,
+            // otherwise we attach the children directly to the NT Node
+            val anchor = if (nAlternatives == 1) keyNode else ConditionalNode(cond, null).addAsChildOf(
+                keyNode,
+                CondEdge()
+            )
+
+            ruleEdges.forEach {
+                val value = it.substitution
+                when (value.size) {
+                    0 -> {
+                        SimpleNode(null).addAsChildOf(anchor)
+                    }
+
+                    1 -> {
+                        val ntVal = value.single().toString()
+                        nodes.getOrPut(ntVal) {
+                            SimpleNode(Chain(value)).addAsChildOf(anchor)
+                        }
+                    }
+
+                    else -> {
+                        complexNodes.getOrPut(value.toString()) {
+                            ComplexNode(Chain(value)).addAsChildOf(anchor)
                         }
                     }
                 }
@@ -128,45 +161,94 @@ fun Grammar.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
 }
 
 
-//private fun Grammar.Companion.fromGraph(graph: DefaultDirectedGraph<Node, DefaultEdge>): Grammar? {
-//    val startsymbol = graph.vertexSet().toList()[0].nodes?.first?.value?.let { NonTerminal(it.value) }
-//    val grammar = mutableMapOf<String, MutableList<RuleEdge>>()
+private fun Grammar.Companion.fromGraph(graph: DefaultDirectedGraph<Node, DefaultEdge>): Grammar? {
+    val startsymbol = graph.vertexSet().toList()[0].nodes?.first?.value?.let { NonTerminal(it.value) }
+    val grammar = mutableMapOf<String, MutableMap<String?, MutableList<RuleEdge>>>()
 
-//    graph.vertexSet()
-//        .filter { it !is ComplexNode }
-//        .forEach {
-//            val succs = graph.succs(it)
-//            succs.forEach { succ ->
-//                val symbols = mutableListOf<Symbol>()
-//                if (succ is ComplexNode) {
-//                    succ.nodes?.forEach { it_sn ->
-//                        if (it_sn is NonTerminal) {
-//                            symbols.add(NonTerminal(it_sn.value))
-//                        } else if (it_sn is Terminal) {
-//                            symbols.add(Terminal(it_sn.value))
-//                        }
-//                    }
-//                } else { // simple node has only one value anyway
-//                    val myNode = succ.nodes?.first?.value
-//                    if (myNode != null) {
-//                        if (myNode is NonTerminal) {
-//                            symbols.add(NonTerminal(myNode.value))
-//                        } else {
-//                            symbols.add(Terminal(myNode.value))
-//                        }
-//                    }
-//                }
-//                val redge = RuleEdge(substitution = symbols, weight = 1.0F)
-//                if (it.toString() in grammar.keys) {
-//                    grammar[it.toString()]?.add(redge)
-//                } else {
-//                    grammar[it.toString()] = mutableListOf(redge)
-//                }
-//            }
-//        }
+    /*
+    for it in simplenodes
+            check if successor is not condnode
+                than create rule from it to succ with null cond
+    for it in condnodes
+            create rule from parent to succ with it as the cond
+    */
 
-//    return startsymbol?.let { Grammar(it, grammar) }
-//}
+    graph.vertexSet()
+        .filter { it !is ComplexNode }
+        .forEach {
+            val succs = graph.succs(it)
+            if (it !is ConditionalNode && !graph.succs(it).any { it_ -> it_ is ConditionalNode }) {
+                succs.forEach { succ ->
+                    val symbols = mutableListOf<Symbol>()
+                    if (succ is ComplexNode) {
+                        succ.nodes?.forEach { it_sn ->
+                            if (it_sn is NonTerminal) {
+                                symbols.add(NonTerminal(it_sn.value))
+                            } else if (it_sn is Terminal) {
+                                symbols.add(Terminal(it_sn.value))
+                            }
+                        }
+                    } else { // simple node has only one value anyway
+                        val myNode = succ.nodes?.first?.value
+                        if (myNode != null) {
+                            if (myNode is NonTerminal) {
+                                symbols.add(NonTerminal(myNode.value))
+                            } else {
+                                symbols.add(Terminal(myNode.value))
+                            }
+                        }
+                    }
+                    val edge = RuleEdge(substitution = symbols, weight = 1.0F)
+                    grammar.getOrPut(it.toString()) {
+                        // in case the non-terminal has not been added to the grammar yet
+                        mutableMapOf()
+                    }// for that NT
+                        .getOrPut(null) {
+                            // in case the condition has not been added yet
+                            mutableListOf()
+                        }.add(edge)
+                }
+            } else if (it is ConditionalNode) {
+                // conditional nodes are always a child of a simplenode and they also have a unique parent
+                val nt = graph.preds(it).single().toString()
+                succs.forEach { succ ->
+                    val symbols = mutableListOf<Symbol>()
+                    if (succ is ComplexNode) {
+                        succ.nodes?.forEach { it_sn ->
+                            if (it_sn is NonTerminal) {
+                                symbols.add(NonTerminal(it_sn.value))
+                            } else if (it_sn is Terminal) {
+                                symbols.add(Terminal(it_sn.value))
+                            }
+                        }
+                    } else { // simple node has only one value anyway
+                        val myNode = succ.nodes?.first?.value
+                        if (myNode != null) {
+                            if (myNode is NonTerminal) {
+                                symbols.add(NonTerminal(myNode.value))
+                            } else {
+                                symbols.add(Terminal(myNode.value))
+                            }
+                        }
+                    }
+
+                    val edge =RuleEdge(substitution = symbols, weight = 1.0F)
+
+                    grammar.getOrPut(nt) {
+                        // in case the non-terminal has not been added to the grammar yet
+                        mutableMapOf()
+                    }// for that NT
+                        .getOrPut(it.cond) {
+                            // in case the condition has not been added yet
+                            mutableListOf()
+                        }.add(edge)
+
+                }
+            }
+        }
+
+    return startsymbol?.let { Grammar(it, grammar) }
+}
 
 fun <V, E> DefaultDirectedGraph<V, E>.preds(vert: V): MutableList<V> {
     return Graphs.predecessorListOf(this, vert)!!
