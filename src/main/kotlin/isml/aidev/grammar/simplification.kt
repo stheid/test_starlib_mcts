@@ -77,20 +77,19 @@ internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
                 val stmt = it.expression
                 when (value.size) {
                     0 -> {
-                        SimpleNode(null).addAsChildOf(anchor, RuleEdgeSimplify(stmt))
+                        SimpleNode(null)
+                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt))
                     }
 
                     1 -> {
                         val ntVal = value.single().toString()
-                        nodes.getOrPut(ntVal) {
-                            SimpleNode(Chain(value)).addAsChildOf(anchor, RuleEdgeSimplify(stmt))
-                        }
+                        nodes.getOrPut(ntVal) { SimpleNode(Chain(value)) }
+                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt))
                     }
 
                     else -> {
-                        complexNodes.getOrPut(value.toString()) {
-                            ComplexNode(Chain(value)).addAsChildOf(anchor, RuleEdgeSimplify(stmt))
-                        }
+                        complexNodes.getOrPut(value.toString()) { ComplexNode(Chain(value)) }
+                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt))
                     }
                 }
             }
@@ -105,51 +104,6 @@ internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
     return graph
 }
 
-
-internal fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(): ProdRules {
-    val prodrules = mutableMapOf<String, MutableMap<String?, MutableList<RuleEdge>>>()
-
-    fun createRules(nt: String, successors: MutableList<Node>, cond: String? = null) {
-        successors.forEach { succ ->
-            val substitution = mutableListOf<Symbol>()
-
-            succ.nodes?.forEach { it_sn ->
-                when (it_sn) {
-                    is NonTerminal -> substitution.add(NonTerminal(it_sn.value))
-                    is Terminal -> substitution.add(Terminal(it_sn.value))
-                }
-            }
-
-            prodrules.getOrPut(nt) {
-                // in case the non-terminal has not been added to the grammar yet
-                mutableMapOf()
-            }// for that NT
-                .getOrPut(cond) {
-                    // in case the condition has not been added yet
-                    mutableListOf()
-                    //TODO expression =
-                }.add(RuleEdge(substitution))
-        }
-    }
-
-    // iterate over all simple nodes and conditional nodes. Simple nodes with conditions are filtered,
-    // such that every rule is only processed exactly once
-    this.vertexSet()
-        .filter { it !is ComplexNode }
-        .forEach {
-            val succs = this.succs(it)
-            if (it !is ConditionalNode && !this.succs(it).any { it_ -> it_ is ConditionalNode }) {
-                // SimpleNodes (with no condition): create rules from non-terminal to the rule substitutions
-                createRules(it.nodes?.first?.value?.value.toString(), succs)
-            } else if (it is ConditionalNode) {
-                // ConditionalNodes: create rules from its non-terminal to the rule substitutions
-                val nt = this.preds(it).single().nodes?.first?.value?.value.toString()
-                createRules(nt, succs, it.cond)
-            }
-        }
-
-    return prodrules
-}
 
 private fun <V, E> DefaultDirectedGraph<V, E>.preds(vert: V): MutableList<V> {
     return Graphs.predecessorListOf(this, vert)!!
@@ -208,13 +162,14 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
                             // replace the non-terminal with all terminals from "succ" and remove the "succ"
                             pred.nodes!!.replace(link, succ.nodes)
                             removeVertex(succ)
+
+                            // integrate the condition of the removed edge to the edges pointing to "pred"
                             preds(pred).forEach {
                                 (getEdge(it, pred) as RuleEdgeSimplify).statement =
-                                  listOfNotNull(
+                                    listOfNotNull(
                                         (getEdge(it, pred) as RuleEdgeSimplify).statement,
                                         secondEdge.statement
                                     ).joinToString(";")
-
                             }
 
                             // Special case: if pred (the ComplexNode) contains only terminals we convert it to a SimpleNode
@@ -225,10 +180,8 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
                                 // eliminate "pred" by letting its predecessors point to "newNode"
                                 preds(pred).forEach {
                                     addEdge(
-                                        it,
-                                        newNode,
-                                        RuleEdgeSimplify(
-                                            (getEdge(it, pred) as RuleEdgeSimplify).statement)
+                                        it, newNode,
+                                        RuleEdgeSimplify((getEdge(it, pred) as RuleEdgeSimplify).statement)
                                     )
                                 }
                                 removeVertex(pred)
@@ -240,4 +193,49 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
         }
     }
     return this
+}
+
+
+internal fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(): ProdRules {
+    val prodrules = mutableMapOf<String, MutableMap<String?, MutableList<RuleEdge>>>()
+
+    fun createRules(nt: String, parent: Node, successors: MutableList<Node>, cond: String? = null) {
+        successors.forEach { succ ->
+            val substitution = mutableListOf<Symbol>()
+
+            succ.nodes?.forEach { it_sn ->
+                when (it_sn) {
+                    is NonTerminal -> substitution.add(NonTerminal(it_sn.value))
+                    is Terminal -> substitution.add(Terminal(it_sn.value))
+                }
+            }
+
+            prodrules.getOrPut(nt) {
+                // in case the non-terminal has not been added to the grammar yet
+                mutableMapOf()
+            }// for that NT
+                .getOrPut(cond) {
+                    // in case the condition has not been added yet
+                    mutableListOf()
+                }.add(RuleEdge(substitution, (getEdge(parent, succ) as? RuleEdgeSimplify)?.statement))
+        }
+    }
+
+    // iterate over all simple nodes and conditional nodes. Simple nodes with conditions are filtered,
+    // such that every rule is only processed exactly once
+    this.vertexSet()
+        .filter { it !is ComplexNode }
+        .forEach {
+            val succs = this.succs(it)
+            if (it !is ConditionalNode && !this.succs(it).any { it_ -> it_ is ConditionalNode }) {
+                // SimpleNodes (with no condition): create rules from non-terminal to the rule substitutions
+                createRules(it.nodes?.first?.value?.value.toString(), it, succs)
+            } else if (it is ConditionalNode) {
+                // ConditionalNodes: create rules from its non-terminal to the rule substitutions
+                val nt = this.preds(it).single().nodes?.first?.value?.value.toString()
+                createRules(nt, it, succs, it.cond)
+            }
+        }
+
+    return prodrules
 }
