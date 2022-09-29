@@ -1,9 +1,13 @@
-package isml.aidev
+package isml.aidev.grammar
 
 import ai.libs.jaicore.search.model.other.SearchGraphPath
 import com.charleskorn.kaml.*
-import isml.aidev.Symbol.NonTerminal
-import isml.aidev.Symbol.Terminal
+import isml.aidev.RuleEdge
+import isml.aidev.SymbolsNode
+import isml.aidev.choice
+import isml.aidev.grammar.Symbol.NonTerminal
+import isml.aidev.grammar.Symbol.Terminal
+import isml.aidev.normalize
 import isml.aidev.util.Evaluator
 import isml.aidev.util.toWord
 import java.io.File
@@ -28,7 +32,7 @@ typealias ProdRules = Map<String, Map<String?, List<RuleEdge>>>
 
 data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
     companion object {
-        fun fromFile(path: String): Grammar {
+        fun fromFile(path: String, doSimplify: Boolean = true): Grammar {
             val root = Yaml.default.parseToYamlNode(File(path).bufferedReader().readText())
             val grammar = root.yamlMap.entries.entries.map { (leftProduction, rightProduction) ->
                 val (NT, cond) = leftProduction.content.splitNtAndCond()
@@ -41,13 +45,13 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
                     })
             }.groupBy { (NT, _, _) -> NT }.entries.associate { (NT, group) ->
                 NT to group.associate { (_, cond, rules) -> cond to rules }
-            }//.simplify()
+            }.run { if (doSimplify) simplify() else this }
 
             return Grammar(NonTerminal(grammar.entries.first().key), grammar)
         }
 
-        fun fromResource(path: String): Grammar {
-           return fromFile(this::class.java.classLoader.getResource(path)?.path!!)
+        fun fromResource(path: String, doSimplify: Boolean = true): Grammar {
+            return fromFile(this::class.java.classLoader.getResource(path)?.path!!, doSimplify)
         }
     }
 

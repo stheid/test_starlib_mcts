@@ -1,8 +1,8 @@
 package isml.aidev.starlib
 
-import isml.aidev.Grammar
 import isml.aidev.RuleEdge
 import isml.aidev.SymbolsNode
+import isml.aidev.grammar.Grammar
 import org.api4.java.datastructure.graph.implicit.INewNodeDescription
 import org.api4.java.datastructure.graph.implicit.ISuccessorGenerator
 

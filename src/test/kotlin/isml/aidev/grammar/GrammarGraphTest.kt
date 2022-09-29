@@ -1,10 +1,7 @@
-package scratch
+package isml.aidev.grammar
 
-import isml.aidev.Grammar
 import isml.aidev.util.Chain
-
 import org.junit.jupiter.api.Test
-import java.io.File
 
 class GrammarGraphTest {
     @Test
@@ -15,9 +12,9 @@ class GrammarGraphTest {
     }
 
     @Test
-    fun toGraphTest(){
-        val grammar = Grammar.fromResource("extremely_simple_gram.yml")
-        val graph = grammar.toGraph()
+    fun toGraphTest() {
+        val grammar = Grammar.fromResource("extremely_simple_gram.yml", false)
+        val graph = grammar.prodRules.toGraph()
         assert(graph.vertexSet().toList().size == 10)
     }
 }

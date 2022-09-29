@@ -1,5 +1,7 @@
 package isml.aidev
 
+import isml.aidev.grammar.Symbol
+
 class RuleEdge(
     val substitution: List<Symbol>,
     val expression: String? = null,

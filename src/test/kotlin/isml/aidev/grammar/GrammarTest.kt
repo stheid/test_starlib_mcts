@@ -1,7 +1,6 @@
-package isml.aidev
+package isml.aidev.grammar
 
 import org.junit.jupiter.api.Test
-import java.io.File
 
 class GrammarTest {
     @Test
