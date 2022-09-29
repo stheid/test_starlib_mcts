@@ -34,7 +34,7 @@ data class SimpleNode(override val nodes: Chain<Symbol>?) : Node(nodes) {
     }
 }
 
-class RuleEdgeSimplify(val statement: String?) : DefaultEdge()
+class RuleEdgeSimplify(var statement: String?) : DefaultEdge()
 class ComplexEdge : DefaultEdge()
 class CondEdge : DefaultEdge()
 
@@ -169,49 +169,71 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
         if (node in this.vertexSet() && succs(node).size == 1 && preds(node).size == 1) {
             Triple(preds(node).single(), node, succs(node).single())
                 .also { (pred, node, succ) ->
-                    if (getEdge(pred, node)!!.javaClass == DefaultEdge().javaClass
-                        && getEdge(node, succ)!!.javaClass == DefaultEdge().javaClass
-                    ) {
-                        // pred, node and succ are primitive nodes
-                        // make nodes predecessor refer to nodes successor
-                        addEdge(pred, succ)
-                        removeVertex(node)
+                    val firstEdge = getEdge(pred, node)
+                    val secondEdge = getEdge(node, succ)
+                    when {
+                        // Only Simple Edges involved
+                        firstEdge is RuleEdgeSimplify && secondEdge is RuleEdgeSimplify -> {
+                            // pred, node and succ are primitive nodes
+                            // make nodes predecessor refer to nodes successor
+                            addEdge(
+                                pred, succ, RuleEdgeSimplify(
+                                    listOfNotNull(
+                                        firstEdge.statement,
+                                        secondEdge.statement
+                                    ).joinToString(";")
+                                )
+                            )
+                            removeVertex(node)
+                            nodesToProcess.addAll(listOf(pred, succ))
+                        }
+                        // complex node with simple node child and grandchild
+                        firstEdge is ComplexEdge
+                                && secondEdge is RuleEdgeSimplify
+                                && pred is ComplexNode
+                                && node is SimpleNode
+                                && succ is SimpleNode
+                                && succ.nodes?.all { it is Terminal } == true -> {
+                            // child node of a complex node must always SimpleNode with only one non-terminal
+                            // pred (ComplexNode) -> node (SimpleNode) -> succ (SimpleNode: only terminals)
+                            // modify pred to point to succ
+                            addEdge(pred, succ, ComplexEdge())
+                            removeVertex(node)
 
-                        nodesToProcess.addAll(listOf(pred, succ))
-
-
-                    } else if (getEdge(pred, node)!!.javaClass == ComplexEdge().javaClass
-                        && pred is ComplexNode
-                        && node is SimpleNode
-                        && succ is SimpleNode
-                        && succ.nodes?.all { it is Terminal } == true
-                    ) {
-                        // child node of a complex node must always SimpleNode with only one non-terminal
-                        // pred (ComplexNode) -> node (SimpleNode) -> succ (SimpleNode: only terminals)
-                        // modify pred to point to succ
-                        addEdge(pred, succ, ComplexEdge())
-                        removeVertex(node)
-
-                        // remove this succ and update ComplexNode
-                        val oldNT = node.nodes?.single() // The Non-terminal
-                        // find the chain link in "pred" containing this non-terminal
-                        val link = pred.nodes!!.linkIterator().asSequence()
-                            .single { it.value.toString() == oldNT.toString() }
-                        // replace the non-terminal with all terminals from "succ" and remove the "succ"
-                        pred.nodes!!.replace(link, succ.nodes)
-                        removeVertex(succ)
-
-                        // Special case: if pred (the ComplexNode) contains only terminals we convert it to a SimpleNode
-                        if (pred.nodes!!.all { it is Terminal }) {
-                            val newNode = SimpleNode(pred.nodes) as Node
-
-                            addVertex(newNode)
-                            // eliminate "pred" by letting its predecessors point to "newNode"
+                            // remove this succ and update ComplexNode
+                            val oldNT = node.nodes?.single() // The Non-terminal
+                            // find the chain link in "pred" containing this non-terminal
+                            val link = pred.nodes!!.linkIterator().asSequence()
+                                .single { it.value.toString() == oldNT.toString() }
+                            // replace the non-terminal with all terminals from "succ" and remove the "succ"
+                            pred.nodes!!.replace(link, succ.nodes)
+                            removeVertex(succ)
                             preds(pred).forEach {
-                                addEdge(it, newNode)
+                                (getEdge(it, pred) as RuleEdgeSimplify).statement =
+                                  listOfNotNull(
+                                        (getEdge(it, pred) as RuleEdgeSimplify).statement,
+                                        secondEdge.statement
+                                    ).joinToString(";")
+
                             }
-                            removeVertex(pred)
-                            nodesToProcess.addAll(preds(newNode))
+
+                            // Special case: if pred (the ComplexNode) contains only terminals we convert it to a SimpleNode
+                            if (pred.nodes!!.all { it is Terminal }) {
+                                val newNode = SimpleNode(pred.nodes) as Node
+
+                                addVertex(newNode)
+                                // eliminate "pred" by letting its predecessors point to "newNode"
+                                preds(pred).forEach {
+                                    addEdge(
+                                        it,
+                                        newNode,
+                                        RuleEdgeSimplify(
+                                            (getEdge(it, pred) as RuleEdgeSimplify).statement)
+                                    )
+                                }
+                                removeVertex(pred)
+                                nodesToProcess.addAll(preds(newNode))
+                            }
                         }
                     }
                 }
