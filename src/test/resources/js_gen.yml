@@ -19,14 +19,14 @@ genStmt[i<6]:
   - '[i+=1] false five genBlock genIdent genBlock' # try catch
   - '[i+=1] false six genBlock'
 
-genStmt[i==6]:
-  - 'true zero genExpr'
-  - 'true one' # break
-  - 'true two' # continue
-  - 'true three genReturn'
-  - 'true four genExpr' # throw
-  - 'true five genIdent' # var
-  - 'true six' # empty
+genStmt:
+  - 'zero genExpr'
+  - 'one' # break
+  - 'two' # continue
+  - 'three genReturn'
+  - 'four genExpr' # throw
+  - 'five genIdent' # var
+  - 'six' # empty
 
 # generateExpression
 # true is || with exprDepth>=maxExprDepth
