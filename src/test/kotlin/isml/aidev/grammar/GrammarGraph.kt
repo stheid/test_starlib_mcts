@@ -37,8 +37,7 @@ fun createExporter(): DOTExporter<Node, DefaultEdge> {
                     is CondEdge -> "blue"
                     else -> "black"
                 }
-            ),
-            "label" to DefaultAttribute.createAttribute(
+            ), "label" to DefaultAttribute.createAttribute(
                 when (it) {
                     is RuleEdgeSimplify -> it.statement ?: ""
                     else -> ""
@@ -51,9 +50,10 @@ fun createExporter(): DOTExporter<Node, DefaultEdge> {
 
 fun main() {
     // val grammar = Grammar.fromResource("simple_annotated_globvar.yaml", false)
-    val grammar = Grammar.fromResource("simplify_4.yaml", false)
+    //val grammar = Grammar.fromResource("simplify_4.yaml", false)
     //val grammar = Grammar.fromResource("simple_annotated_grammargraph.yaml", false)
-//    val grammar = Grammar.fromResource("extremely_simple_gram.yml")
+//  val grammar = Grammar.fromResource("extremely_simple_gram.yml")
+    val grammar = Grammar.fromResource("js_gen.yml")
 
     println(grammar)
     var graph = grammar.prodRules.toGraph()

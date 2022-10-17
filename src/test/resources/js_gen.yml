@@ -4,13 +4,13 @@ gen:
 # generateStatement
 # true is || with stmtDepth>=maxStmtDepth
 genStmt[i<6]:
-  - '[del i] true zero genExpr'
-  - '[del i] true one' # break
-  - '[del i] true two' # continue
-  - '[del i] true three genReturn'
-  - '[del i] true four genExpr' # throw
-  - '[del i] true five genIdent' # var
-  - '[del i] true six' # empty
+  - 'true zero genExpr'
+  - 'true one' # break
+  - 'true two' # continue
+  - 'true three genReturn'
+  - 'true four genExpr' # throw
+  - 'true five genIdent' # var
+  - 'true six' # empty
   - '[i+=1] false zero genIf'
   - '[i+=1] false one genFor'
   - '[i+=1] false two genExpr genBlock' # while
@@ -43,7 +43,7 @@ genExpr[j<10]:
   '[j+=1] false seven mean3Ident true genBlock': 1 # arrowfunc
   '[j+=1] false seven mean3Ident false genExpr': 1 # arrowfunc
 
-genExpr[j==10]:
+genExpr:
   - 'zero genLit'
   - 'one genIdent'
 
