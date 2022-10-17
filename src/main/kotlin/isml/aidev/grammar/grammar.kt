@@ -34,6 +34,7 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
     companion object {
         fun fromFile(path: String, doSimplify: Boolean = true): Grammar {
             val root = Yaml.default.parseToYamlNode(File(path).bufferedReader().readText())
+            val startSymbol: NonTerminal
             val grammar = root.yamlMap.entries.entries.map { (leftProduction, rightProduction) ->
                 val (NT, cond) = leftProduction.content.splitNtAndCond()
                 // the default condition is "true"
@@ -46,12 +47,13 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
             }.groupBy { (NT, _, _) -> NT }.entries.associate { (NT, group) ->
                 NT to group.associate { (_, cond, rules) -> cond to rules }
             }.run {
+                startSymbol = NonTerminal(keys.first())
                 // this will be able to simplify the graph
                 // and add calculate the distance between non-terminals and leafs
-                processAsGraph(doSimplify)
+                processAsGraph(doSimplify, startSymbol)
             }
 
-            return Grammar(NonTerminal(grammar.entries.first().key), grammar)
+            return Grammar(startSymbol, grammar)
         }
 
         fun fromResource(path: String, doSimplify: Boolean = true): Grammar {

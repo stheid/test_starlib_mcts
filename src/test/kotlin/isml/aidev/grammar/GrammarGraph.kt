@@ -53,7 +53,8 @@ fun main() {
     //val grammar = Grammar.fromResource("simplify_4.yaml", false)
     //val grammar = Grammar.fromResource("simple_annotated_grammargraph.yaml", false)
 //  val grammar = Grammar.fromResource("extremely_simple_gram.yml")
-    val grammar = Grammar.fromResource("js_gen.yml")
+//    val grammar = Grammar.fromResource("js_gen.yml")
+    val grammar = Grammar.fromResource("xml_gen_annot.yaml")
 
     println(grammar)
     var graph = grammar.prodRules.toGraph()
@@ -62,6 +63,6 @@ fun main() {
     graph = graph.simplify()
     createExporter().exportGraph(graph, File("grammar_simple.dot").bufferedWriter())
 
-    val rules = graph.toProdRules()
+    val rules = graph.toProdRules(grammar.startSymbol)
     println(rules)
 }

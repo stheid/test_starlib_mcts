@@ -40,8 +40,8 @@ class ComplexEdge : DefaultEdge()
 class CondEdge : DefaultEdge()
 
 
-fun ProdRules.processAsGraph(doSimplify: Boolean): ProdRules =
-    this.toGraph().run { if (doSimplify) simplify() else this }.toProdRules()
+fun ProdRules.processAsGraph(doSimplify: Boolean, startSymbol: NonTerminal): ProdRules =
+    this.toGraph().run { if (doSimplify) simplify() else this }.toProdRules(startSymbol)
 
 internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
     // Example JGraphT code https://jgrapht.org/guide/UserOverview
@@ -198,10 +198,13 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
 }
 
 
-internal fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(): ProdRules {
+internal fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(startSymbol: NonTerminal): ProdRules {
     val prodrules = mutableMapOf<String, MutableMap<String?, MutableList<RuleEdge>>>()
     // shortest paths from the root
-    val shortestPathToRoot = BellmanFordShortestPath(this).getPaths(vertexSet().single { preds(it).size == 0 })
+    val shortestPathToRoot =
+        BellmanFordShortestPath(this).getPaths(vertexSet().single {
+            it.nodes?.singleOrNull()?.run { value == startSymbol.value } ?: false
+        })
 
     fun createRules(nt: String, parent: Node, successors: MutableList<Node>, cond: String? = null) {
         successors.forEach { succ ->
@@ -221,7 +224,8 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(): ProdRules {
                             }.map {
                                 // calculate average distance of those nodes to the root node
                                 // only count simple nodes. Last node might be simple OR complex, therefore we omit it from the calculation
-                                shortestPathToRoot.getPath(it).vertexList.dropLast(1).filterIsInstance<SimpleNode>().size
+                                shortestPathToRoot.getPath(it).vertexList.dropLast(1)
+                                    .filterIsInstance<SimpleNode>().size
                             }.toIntArray().average()
                         )
                     )
