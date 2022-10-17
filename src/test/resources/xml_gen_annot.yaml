@@ -67,9 +67,9 @@ makeAlphaString:
   '_19_from10Geo byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte': 0.015009463529699918
   '_20_from10Geo byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte': 0.013508517176729929
 
-makeDictString:
+#makeDictString:
   # For the ant.dict
-  - '"\x00" . "\x74"'
+#  - '"\x00" . "\x74"'
   # for the mvn.dict
   # '"\x00" . "\x8c"': 1
 
