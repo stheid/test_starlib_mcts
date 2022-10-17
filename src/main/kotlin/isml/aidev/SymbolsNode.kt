@@ -39,7 +39,14 @@ class SymbolsNode(
         }
 
         val newNts = rule.substitution.filterIsInstance<Symbol.NonTerminal>().map { it.copy() }.toList()
-        val nextNT = (remainingNTs.toList() + newNts).randomOrNull()
+
+        // Heuristic: resolve most abstract non-terminals first
+        val nextNT = (remainingNTs.toList() + newNts)
+            .run {
+                filter {
+                    it == maxBy(Symbol.NonTerminal::abstractness)
+                }
+            }.randomOrNull()
 
         // in case newVars is null because there was no expression executed, we reuse the old local and global vars
         val newLocalvars = newVars?.filterKeys { !it.startsWith("_") } ?: localvars[currNT]

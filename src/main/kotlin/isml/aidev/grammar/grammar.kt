@@ -21,8 +21,8 @@ sealed class Symbol(open val value: String) {
      * Mustn't be a data class as we need to uniquely identify non-terminals by their object reference.
      * For a non-unique comparison we can use the Non-Terminals internal string.
      */
-    class NonTerminal(override val value: String) : Symbol(value) {
-        override fun toString() = "nt: $value"
+    class NonTerminal(override val value: String, var abstractness: Double = 0.0) : Symbol(value) {
+        override fun toString() = "nt: $value (${"%.2f".format(abstractness)})"
 
         fun copy() = NonTerminal(value)
     }
@@ -45,7 +45,11 @@ data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
                     })
             }.groupBy { (NT, _, _) -> NT }.entries.associate { (NT, group) ->
                 NT to group.associate { (_, cond, rules) -> cond to rules }
-            }.run { if (doSimplify) simplify() else this }
+            }.run {
+                // this will be able to simplify the graph
+                // and add calculate the distance between non-terminals and leafs
+                processAsGraph(doSimplify)
+            }
 
             return Grammar(NonTerminal(grammar.entries.first().key), grammar)
         }
