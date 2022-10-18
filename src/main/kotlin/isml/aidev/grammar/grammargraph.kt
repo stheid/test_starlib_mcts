@@ -138,7 +138,7 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
                                     listOfNotNull(
                                         firstEdge.statement,
                                         secondEdge.statement
-                                    ).joinToString(";")
+                                    ).joinToString(";"), firstEdge.weight
                                 )
                             )
                             removeVertex(node)
@@ -160,8 +160,7 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
                             // remove this succ and update ComplexNode
                             val oldNT = node.nodes?.single() // The Non-terminal
                             // find the chain link in "pred" containing this non-terminal
-                            val link = pred.nodes!!.linkIterator().asSequence()
-                                .single { it.value.value == oldNT?.value }
+                            val link = pred.nodes!!.linkIterator().asSequence().single { it.value.symbolEqual(oldNT) }
                             // replace the non-terminal with all terminals from "succ" and remove the "succ"
                             pred.nodes!!.replace(link, succ.nodes)
                             removeVertex(succ)
@@ -182,9 +181,13 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
                                 addVertex(newNode)
                                 // eliminate "pred" by letting its predecessors point to "newNode"
                                 preds(pred).forEach {
+                                    val oldEdge = getEdge(it, pred) as RuleEdgeSimplify
                                     addEdge(
                                         it, newNode,
-                                        RuleEdgeSimplify((getEdge(it, pred) as RuleEdgeSimplify).statement)
+                                        RuleEdgeSimplify(
+                                            (getEdge(it, pred) as RuleEdgeSimplify).statement,
+                                            oldEdge.weight
+                                        )
                                     )
                                 }
                                 removeVertex(pred)
@@ -207,9 +210,10 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(startSymbol: No
             it.nodes?.singleOrNull()?.run { value == startSymbol.value } ?: false
         })
 
-    fun createRules(nt: String, parent: Node, successors: MutableList<Node>, cond: String? = null) {
-        successors.forEach { succ ->
+    fun createRules(nt: String, parent: Node, successors: List<Node>, cond: String? = null) {
+        successors.forEachIndexed { i, succ ->
             val substitution = mutableListOf<Symbol>()
+            val ruleEdges = successors.map { getEdge(parent, it) as RuleEdgeSimplify }
 
             succ.nodes?.forEach { it_sn ->
                 when (it_sn) {
@@ -242,22 +246,28 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(startSymbol: No
                 .getOrPut(cond) {
                     // in case the condition has not been added yet
                     mutableListOf()
-                }.add(RuleEdge(substitution, (getEdge(parent, succ) as? RuleEdgeSimplify)?.statement))
+                }.add(
+                    RuleEdge(
+                        substitution,
+                        (getEdge(parent, succ) as? RuleEdgeSimplify)?.statement,
+                        ruleEdges[i].weight
+                    )
+                )
         }
     }
 
     // iterate over all simple nodes and conditional nodes. Simple nodes with conditions are filtered,
     // such that every rule is only processed exactly once
-    this.vertexSet()
+    vertexSet()
         .filter { it !is ComplexNode }
         .forEach {
-            val succs = this.succs(it)
-            if (it !is ConditionalNode && !this.succs(it).any { it_ -> it_ is ConditionalNode }) {
+            val succs = succs(it)
+            if (it !is ConditionalNode && !succs(it).any { it_ -> it_ is ConditionalNode }) {
                 // SimpleNodes (with no condition): create rules from non-terminal to the rule substitutions
                 createRules(it.nodes?.first?.value?.value.toString(), it, succs)
             } else if (it is ConditionalNode) {
                 // ConditionalNodes: create rules from its non-terminal to the rule substitutions
-                val nt = this.preds(it).single().nodes?.first?.value?.value.toString()
+                val nt = preds(it).single().nodes?.first?.value?.value.toString()
                 createRules(nt, it, succs, it.cond)
             }
         }
