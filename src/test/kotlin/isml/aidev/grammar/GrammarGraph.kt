@@ -39,7 +39,7 @@ fun createExporter(): DOTExporter<Node, DefaultEdge> {
                 }
             ), "label" to DefaultAttribute.createAttribute(
                 when (it) {
-                    is RuleEdgeSimplify -> it.statement ?: ""
+                    is RuleEdgeSimplify -> listOfNotNull(it.statement, "%.2f".format(it.weight)).joinToString()
                     else -> ""
                 }
             )
@@ -51,10 +51,10 @@ fun createExporter(): DOTExporter<Node, DefaultEdge> {
 fun main() {
     // val grammar = Grammar.fromResource("simple_annotated_globvar.yaml", false)
     //val grammar = Grammar.fromResource("simplify_4.yaml", false)
-    //val grammar = Grammar.fromResource("simple_annotated_grammargraph.yaml", false)
+    val grammar = Grammar.fromResource("simple_annotated_grammargraph.yaml", false)
 //  val grammar = Grammar.fromResource("extremely_simple_gram.yml")
 //    val grammar = Grammar.fromResource("js_gen.yml")
-    val grammar = Grammar.fromResource("xml_gen_annot.yaml")
+    //val grammar = Grammar.fromResource("xml_gen_annot.yaml")
 
     println(grammar)
     var graph = grammar.prodRules.toGraph()
