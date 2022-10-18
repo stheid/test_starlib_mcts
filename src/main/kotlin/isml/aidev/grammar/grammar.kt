@@ -28,6 +28,8 @@ sealed class Symbol(open val value: String) {
 
         fun copy() = NonTerminal(value)
     }
+
+    fun symbolEqual(symbol: Symbol?) = value == symbol?.value
 }
 
 typealias ProdRules = Map<String, Map<String?, List<RuleEdge>>>
