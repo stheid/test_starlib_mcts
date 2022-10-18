@@ -35,7 +35,7 @@ data class SimpleNode(override val nodes: Chain<Symbol>?) : Node(nodes) {
     }
 }
 
-class RuleEdgeSimplify(var statement: String?) : DefaultEdge()
+class RuleEdgeSimplify(var statement: String?, var weight: Float = 0.0f) : DefaultEdge()
 class ComplexEdge : DefaultEdge()
 class CondEdge : DefaultEdge()
 
@@ -56,7 +56,7 @@ internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
     }
 
     // add all nodes as vertices to graph,
-    // add edges among keys and values in production rules.
+    // add edges between keys and values in production rules.
     this.forEach { (nt_key, cond_ruleEdges) ->
         val nt = NonTerminal(nt_key)
         val keyNode = nodes.getOrPut(nt.value) {
@@ -77,21 +77,22 @@ internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
             ruleEdges.forEach {
                 val value = it.substitution
                 val stmt = it.expression
+                val weight = it.weight
                 when (value.size) {
                     0 -> {
                         SimpleNode(null)
-                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt))
+                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt, weight))
                     }
 
                     1 -> {
                         val ntVal = value.single().value
                         nodes.getOrPut(ntVal) { SimpleNode(Chain(value)) }
-                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt))
+                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt, weight))
                     }
 
                     else -> {
                         complexNodes.getOrPut(value.joinToString { it.value }) { ComplexNode(Chain(value)) }
-                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt))
+                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt, weight))
                     }
                 }
             }
@@ -160,7 +161,7 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
                             val oldNT = node.nodes?.single() // The Non-terminal
                             // find the chain link in "pred" containing this non-terminal
                             val link = pred.nodes!!.linkIterator().asSequence()
-                                .single { it.value.toString() == oldNT.toString() }
+                                .single { it.value.value == oldNT?.value }
                             // replace the non-terminal with all terminals from "succ" and remove the "succ"
                             pred.nodes!!.replace(link, succ.nodes)
                             removeVertex(succ)
@@ -226,7 +227,7 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(startSymbol: No
                                 // only count simple nodes. Last node might be simple OR complex, therefore we omit it from the calculation
                                 shortestPathToRoot.getPath(it).vertexList.dropLast(1)
                                     .filterIsInstance<SimpleNode>().size
-                            }.toIntArray().average()
+                            }.toIntArray().average().toFloat()
                         )
                     )
 

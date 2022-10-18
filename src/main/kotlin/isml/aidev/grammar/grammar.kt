@@ -20,9 +20,11 @@ sealed class Symbol(open val value: String) {
     /**
      * Mustn't be a data class as we need to uniquely identify non-terminals by their object reference.
      * For a non-unique comparison we can use the Non-Terminals internal string.
+     * @param nExpectedSymbols the expected number of terminal symbols this non-terminal will evaluate to in the current grammar
      */
-    class NonTerminal(override val value: String, var abstractness: Double = 0.0) : Symbol(value) {
-        override fun toString() = "nt: $value (${"%.2f".format(abstractness)})"
+    class NonTerminal(override val value: String, var abstractness: Float = 0.0f, var nExpectedSymbols: Float = 0.0f) :
+        Symbol(value) {
+        override fun toString() = "nt: $value (${"%.2f".format(abstractness)}, ${"%.2f".format(nExpectedSymbols)})"
 
         fun copy() = NonTerminal(value)
     }
