@@ -41,7 +41,7 @@ class CondEdge : DefaultEdge()
 
 
 fun ProdRules.processAsGraph(doSimplify: Boolean, startSymbol: NonTerminal): ProdRules =
-    this.toGraph().run { if (doSimplify) simplify() else this }.toProdRules(startSymbol)
+    this.toGraph().run { if (doSimplify) simplify() else this }.normalizeWeights().toProdRules(startSymbol)
 
 internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
     // Example JGraphT code https://jgrapht.org/guide/UserOverview
@@ -108,13 +108,8 @@ internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
 }
 
 
-private fun <V, E> DefaultDirectedGraph<V, E>.preds(vert: V): MutableList<V> {
-    return Graphs.predecessorListOf(this, vert)!!
-}
-
-private fun <V, E> DefaultDirectedGraph<V, E>.succs(vert: V): MutableList<V> {
-    return Graphs.successorListOf(this, vert)!!
-}
+private fun <V, E> DefaultDirectedGraph<V, E>.preds(vert: V) = Graphs.predecessorListOf(this, vert)!!
+private fun <V, E> DefaultDirectedGraph<V, E>.succs(vert: V) = Graphs.successorListOf(this, vert)!!
 
 internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirectedGraph<Node, DefaultEdge> {
     val nodesToProcess = vertexSet().toMutableList()
@@ -201,6 +196,21 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
     return this
 }
 
+internal fun DefaultDirectedGraph<Node, DefaultEdge>.normalizeWeights(): DefaultDirectedGraph<Node, DefaultEdge> {
+// for all simple edges:
+    // get sibling edges
+    // normalize weights
+    // mark all siblings as processed
+    val unprocessed = edgeSet().filterIsInstance<RuleEdgeSimplify>().toMutableList()
+    while (unprocessed.isNotEmpty()) {
+        val currEdge = unprocessed.removeFirst()
+        val siblings = outgoingEdgesOf(getEdgeSource(currEdge))
+        val totalWeight = siblings.map { (it as RuleEdgeSimplify).weight }.toFloatArray().sum()
+        siblings.forEach { (it as RuleEdgeSimplify).weight /= totalWeight }
+        unprocessed.removeAll(siblings)
+    }
+    return this
+}
 
 internal fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(startSymbol: NonTerminal): ProdRules {
     val prodrules = mutableMapOf<String, MutableMap<String?, MutableList<RuleEdge>>>()
