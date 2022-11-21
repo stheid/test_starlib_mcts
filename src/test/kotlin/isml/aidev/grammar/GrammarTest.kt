@@ -58,6 +58,15 @@ class GrammarTest {
     }
 
     @Test
+    fun sampleEquationGram() {
+        val grammar =
+            Grammar.fromFile(this::class.java.classLoader.getResource("equation_gram.yaml")?.path!!)
+        for (i in 1..10){
+            println(grammar.sample())
+        }
+    }
+
+    @Test
     fun sampleAnotatedGlobalGram() {
         val grammar =
             Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_globvar.yaml")?.path!!)
@@ -76,6 +85,7 @@ class GrammarTest {
         val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("xml_gen_annot.yaml")?.path!!)
         for (i in 1..500){
             val byteseq = grammar.sample()
+            println(byteseq)
 //            File("annotated/$i.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
         }
     }
@@ -85,7 +95,7 @@ class GrammarTest {
         val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("js_gen.yml")?.path!!)
         for (i in 1..100){
             val byteseq = grammar.sample()
-            print(byteseq)
+            println(byteseq)
 //            File("annotated/$i.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
         }
     }

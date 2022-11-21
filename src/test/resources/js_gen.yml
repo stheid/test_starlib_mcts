@@ -79,7 +79,7 @@ genNameFunc:
 #        print(f'\'_{i}geo{mean} {" ".join(repeat(nts,i+offset))}\': {geom(1/mean).pmf(i):.4f}')
 # gen('genIdent',5)
 genFunc:
-  '_1geo5 genIdent': 0.2000
+  '_1geo5 genIdent': 10.2000
   '_2geo5 genIdent genIdent': 0.1600
   '_3geo5 genIdent genIdent genIdent': 0.1280
   '_4geo5 genIdent genIdent genIdent genIdent': 0.1024
@@ -91,7 +91,7 @@ genFunc:
   '_10geo5 genIdent genIdent genIdent genIdent genIdent genIdent genIdent genIdent genIdent genIdent': 0.0268
 
 genBlock:
-  '_1geo4 genStmt': 0.2500
+  '_1geo4 genStmt': 10.2500
   '_2geo4 genStmt genStmt': 0.1875
   '_3geo4 genStmt genStmt genStmt': 0.1406
   '_4geo4 genStmt genStmt genStmt genStmt': 0.1055
@@ -103,7 +103,7 @@ genBlock:
 
 # gen('genExpr genBlock',2)
 genCases:
-  '_1geo2 genExpr genBlock': 0.5000
+  '_1geo2 genExpr genBlock': 10.5000
   '_2geo2 genExpr genBlock genExpr genBlock': 0.2500
   '_3geo2 genExpr genBlock genExpr genBlock genExpr genBlock': 0.1250
   '_4geo2 genExpr genBlock genExpr genBlock genExpr genBlock genExpr genBlock': 0.0625
@@ -126,7 +126,7 @@ nonNestingLit:
 
 # gen('byte',10)
 asciiStr:
-  '_1geo10 byte': 0.1000
+  '_1geo10 byte': 10.1000
   '_2geo10 byte byte': 0.0900
   '_3geo10 byte byte byte': 0.0810
   '_4geo10 byte byte byte byte': 0.0729
@@ -149,7 +149,7 @@ asciiStr:
 
 
 mean3Expr:
-  '_1geo3 genExpr': 0.3333
+  '_1geo3 genExpr': 10.3333
   '_2geo3 genExpr genExpr': 0.2222
   '_3geo3 genExpr genExpr genExpr': 0.1481
   '_4geo3 genExpr genExpr genExpr genExpr': 0.0988
@@ -157,7 +157,7 @@ mean3Expr:
   '_6geo3 genExpr genExpr genExpr genExpr genExpr genExpr': 0.0439
 
 mean3Ident:
-  '_1geo3 genIdent': 0.3333
+  '_1geo3 genIdent': 10.3333
   '_2geo3 genIdent genIdent': 0.2222
   '_3geo3 genIdent genIdent genIdent': 0.1481
   '_4geo3 genIdent genIdent genIdent genIdent': 0.0988
@@ -165,7 +165,7 @@ mean3Ident:
   '_6geo3 genIdent genIdent genIdent genIdent genIdent genIdent': 0.0439
 
 mean3Object:
-  '_1geo3 genIdent genExpr': 0.3333
+  '_1geo3 genIdent genExpr': 10.3333
   '_2geo3 genIdent genExpr genIdent genExpr': 0.2222
   '_3geo3 genIdent genExpr genIdent genExpr genIdent genExpr': 0.1481
   '_4geo3 genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr': 0.0988
