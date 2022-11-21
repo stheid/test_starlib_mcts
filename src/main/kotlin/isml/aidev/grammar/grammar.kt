@@ -102,12 +102,21 @@ private fun YamlNode.parseRule(): Map<String, Float> {
     else this.yamlMap.entries.entries.associate { (key, value) -> key.content to value.yamlScalar.toFloat() }
 }
 
+private fun String.isSingleChar(): Boolean = Regex(""".""").matches(this)
+private fun String.isInt(): Boolean = this.toIntOrNull() != null
+
 private fun List<String>.tryExpand(): List<Terminal>? {
     return if (this.size == 3 && this[0].isQuoted() && this[1] == "." && this[2].isQuoted()) {
-        // convert first and last character to byte character value
-        val start = this[0].unQuote().single().code
-        val end = this[2].unQuote().single().code
-        start.rangeTo(end).map { Terminal(it.toChar().toString()) }
+        val start_r = this[0].unQuote()
+        val end_r = this[2].unQuote()
+        if (start_r.isSingleChar() && end_r.isSingleChar()) {
+            // convert first and last character to byte character value
+            val start = start_r.single().code
+            val end = end_r.single().code
+            start.rangeTo(end).map { Terminal(it.toChar().toString()) }
+        } else if (start_r.isInt() && end_r.isInt()) {
+            start_r.toInt().rangeTo(end_r.toInt()).map { Terminal(it.toString()) }
+        } else null
     } else null
 }
 
@@ -133,7 +142,15 @@ private fun String.toRuleEdges(weight: Float): List<RuleEdge> {
     }
 }
 
-private fun String.isQuoted(): Boolean = this.startsWith("\"") && this.endsWith("\"")
+private fun String.isQuoted(): Boolean {
+    return if (this.startsWith("\"") && this.endsWith("\""))
+        true
+    else if (this.startsWith("\"") || this.endsWith("\""))
+        error("$this is half quoted, please fix the grammar by adding a quote or by seperating the non-terminal and terminal by whitespace. If you intended to use a quote in a non-terminal you need to excape it as a unicode symbol.")
+    else
+        false
+}
+
 private fun String.unQuote(): String = this.drop(1).dropLast(1)
     .replace(Regex("""\\x\p{XDigit}\p{XDigit}""")) { it.value.drop(2).toInt(16).toChar().toString() }
     .replace(Regex("""\\u\p{XDigit}\p{XDigit}\p{XDigit}\p{XDigit}""")) {
