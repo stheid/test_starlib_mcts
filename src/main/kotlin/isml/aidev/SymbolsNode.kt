@@ -31,7 +31,7 @@ class SymbolsNode(
         globalvars + (localvars.get(nt) ?: mapOf())
 
     override fun toString() =
-        "SymbolNode(currNT=${currNT}, depth=${depth})"
+        "SymbolNode(currNT=${currNT}, remainingNTs=$remainingNTs, depth=${depth}, globalvars=$globalvars, localvars=$localvars)"
 
     fun createChild(rule: RuleEdge): SymbolsNode {
         val newVars = rule.expression?.let {
