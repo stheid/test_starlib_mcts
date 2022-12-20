@@ -11,9 +11,9 @@ fun createExporter(): DOTExporter<Node, Edge> {
             is ConditionalNode -> """"${it.cond + " " + it.hashCode().toString().substring(0..4)}""""
 
             else -> """"${
-                it.nodes.toString().filter { it.isLetterOrDigit() || it == ' ' } + " " + it.hashCode().toString()
+                it.nodes.toString().filter { it.isLetterOrDigit() || it == ' ' || it ==',' || it =='(' || it ==')' || it =='.' || it == '-' } + "," + it.hashCode().toString()
                     .substring(0..4)
-            } ${it.expectedExpansions}""""
+            } ${it.expectedExpansions} """"
         }
     }
 
@@ -48,22 +48,22 @@ fun createExporter(): DOTExporter<Node, Edge> {
 }
 
 fun main() {
-    //val grammar = Grammar.fromResource("simple_annotated_globvar.yaml", false)
+    val grammar = Grammar.fromResource("simple_annotated_globvar.yaml", false)
     //val grammar = Grammar.fromResource("simplify_4.yaml", false)
-    //val grammar = Grammar.fromResource("simple_annotated_grammargraph.yaml", false)
+//    val grammar = Grammar.fromResource("simple_annotated_grammargraph.yaml", false)
 //  val grammar = Grammar.fromResource("extremely_simple_gram.yml")
-//    val grammar = Grammar.fromResource("js_gen.yml")
+//    val grammar = Grammar.fromResource("js_gen/js_if.yml")
     //val grammar = Grammar.fromResource("xml_gen_annot.yaml")
     //val grammar = Grammar.fromResource("complex_anot.yaml", false)
-    val grammar = Grammar.fromResource("test_expectation1.yaml", false)
+//    val grammar = Grammar.fromResource("test_expectation1.yaml", false)
 
     println(grammar)
-    var graph = grammar.prodRules.toGraph()
-
+    var graph = grammar.prodRules.toGraph(grammar.ntMap)
+//
     createExporter().exportGraph(graph, File("grammar_raw.dot").bufferedWriter())
     graph = graph.simplify().calculateExpectation(grammar.startSymbol)
     createExporter().exportGraph(graph, File("grammar_simple.dot").bufferedWriter())
-
-    val rules = graph.toProdRules(grammar.startSymbol)
+//
+    val rules = graph.toProdRules(grammar.startSymbol, grammar.ntMap)
     println(rules)
 }

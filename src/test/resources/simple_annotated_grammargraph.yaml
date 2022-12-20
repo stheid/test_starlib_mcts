@@ -2,11 +2,25 @@ A[i<3]:
   - '[_i+=1] "a" A B'
 
 A[i==3]:
-  - '[_i+=1] "c" C'
+  - '"c" C'
 
 B:
   - '"b"'
   - '"x"'
+  - 'D'
+
+D:
+  - '"d"'
 
 C:
   - '"c"'
+
+# sample outputs
+# "aaaccbbb"
+# "aaaccbbx"
+# "aaaccbxb"
+# "aaaccbxx"
+# "aaaccxbb"
+# "aaaccxbx"
+# "aaaccxxb"
+# "aaaccxxx"

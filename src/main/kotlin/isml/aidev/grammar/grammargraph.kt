@@ -43,11 +43,11 @@ class ComplexEdge : Edge()
 class CondEdge : Edge()
 
 
-fun ProdRules.processAsGraph(doSimplify: Boolean, startSymbol: NonTerminal): ProdRules =
-    this.toGraph().run { if (doSimplify) simplify() else this }.normalizeWeights().calculateExpectation(startSymbol)
-        .toProdRules(startSymbol)
+fun ProdRules.processAsGraph(doSimplify: Boolean, startSymbol: NonTerminal, ntMap: MutableMap<String, NonTerminal>): ProdRules =
+    this.toGraph(ntMap).run { if (doSimplify) simplify() else this }.normalizeWeights().calculateExpectation(startSymbol)
+        .toProdRules(startSymbol, ntMap)
 
-internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, Edge> {
+internal fun ProdRules.toGraph(ntMap: MutableMap<String, NonTerminal>): DefaultDirectedGraph<Node, Edge> {
     // Example JGraphT code https://jgrapht.org/guide/UserOverview
     val graph = DefaultDirectedGraph<Node, Edge>(Edge::class.java)
     val nodes = mutableMapOf<String, Node>()
@@ -61,8 +61,8 @@ internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, Edge> {
 
     // add all nodes as vertices to graph,
     // add edges between keys and values in production rules.
-    this.forEach { (nt_key, cond_ruleEdges) ->
-        val nt = NonTerminal(nt_key)
+    forEach { (nt_key, cond_ruleEdges) ->
+        val nt = ntMap[nt_key]!!
         val keyNode = nodes.getOrPut(nt.value) {
             SimpleNode(Chain(listOf(nt))).apply {
                 graph.addVertex(this)
@@ -110,7 +110,6 @@ internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, Edge> {
     }
     return graph
 }
-
 
 private fun <V, E> DefaultDirectedGraph<V, E>.preds(vert: V) = Graphs.predecessorListOf(this, vert)!!
 private fun <V, E> DefaultDirectedGraph<V, E>.succs(vert: V) = Graphs.successorListOf(this, vert)!!
@@ -289,36 +288,39 @@ internal fun pseudoTopoOrder(graph: DefaultDirectedGraph<Node, Edge>, startSymbo
 }
 
 
-internal fun DefaultDirectedGraph<Node, Edge>.toProdRules(startSymbol: NonTerminal): ProdRules {
+internal fun DefaultDirectedGraph<Node, Edge>.toProdRules(startSymbol: NonTerminal, ntMap: MutableMap<String, NonTerminal>): ProdRules {
     val prodrules = mutableMapOf<String, MutableMap<String?, MutableList<RuleEdge>>>()
     // shortest paths from the root
     val shortestPathToRoot = BellmanFordShortestPath(this).getPaths(getNodeFor(startSymbol))
-
     fun createRules(nt: String, parent: Node, successors: List<Node>, cond: String? = null) {
         successors.map { it to getEdge(parent, it) as RuleEdgeSimplify }.forEach { (succ, edge) ->
             val substitution = mutableListOf<Symbol>()
 
             succ.nodes?.forEach { it_sn ->
                 when (it_sn) {
-                    is NonTerminal -> substitution.add(
-                        NonTerminal(
-                            it_sn.value,
-                            // Nodes that are closer to the root are more abstract
-                            -vertexSet().filter {
-                                // get all nodes that use the non-terminal
-                                it.nodes?.any { sym ->
-                                    sym.value == it_sn.value
-                                } == true
-                            }.map {
-                                // calculate average distance of those nodes to the root node
-                                // only count simple nodes. Last node might be simple OR complex, therefore we omit it from the calculation
-                                shortestPathToRoot.getPath(it).vertexList.dropLast(1)
-                                    .filterIsInstance<SimpleNode>().size
-                            }.toIntArray().average().toFloat()
-                        )
-                    )
+                    is NonTerminal -> {
+
+                        val _nt = NonTerminal(
+                                it_sn.value,
+                                // Nodes that are closer to the root are more abstract
+                                -vertexSet().filter {
+                                    // get all nodes that use the non-terminal
+                                    it.nodes?.any { sym ->
+                                        sym.value == it_sn.value
+                                    } == true
+                                }.map {
+                                    // calculate average distance of those nodes to the root node
+                                    // only count simple nodes. Last node might be simple OR complex, therefore we omit it from the calculation
+                                    shortestPathToRoot.getPath(it).vertexList.dropLast(1)
+                                        .filterIsInstance<SimpleNode>().size
+                                }.toIntArray().average().toFloat()
+                            )
+                        substitution.add(_nt)
+                        ntMap[it_sn.value] = _nt
+                    }
 
                     is Terminal -> substitution.add(Terminal(it_sn.value))
+                    else -> {}
                 }
             }
 
