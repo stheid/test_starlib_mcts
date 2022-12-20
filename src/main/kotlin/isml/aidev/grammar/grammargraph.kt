@@ -43,8 +43,13 @@ class ComplexEdge : Edge()
 class CondEdge : Edge()
 
 
-fun ProdRules.processAsGraph(doSimplify: Boolean, startSymbol: NonTerminal, ntMap: MutableMap<String, NonTerminal>): ProdRules =
-    this.toGraph(ntMap).run { if (doSimplify) simplify() else this }.normalizeWeights().calculateExpectation(startSymbol)
+fun ProdRules.processAsGraph(
+    doSimplify: Boolean,
+    startSymbol: NonTerminal,
+    ntMap: MutableMap<String, NonTerminal>,
+): ProdRules =
+    this.toGraph(ntMap).run { if (doSimplify) simplify() else this }.normalizeWeights()
+        .calculateExpectation(startSymbol)
         .toProdRules(startSymbol, ntMap)
 
 internal fun ProdRules.toGraph(ntMap: MutableMap<String, NonTerminal>): DefaultDirectedGraph<Node, Edge> {
@@ -288,7 +293,10 @@ internal fun pseudoTopoOrder(graph: DefaultDirectedGraph<Node, Edge>, startSymbo
 }
 
 
-internal fun DefaultDirectedGraph<Node, Edge>.toProdRules(startSymbol: NonTerminal, ntMap: MutableMap<String, NonTerminal>): ProdRules {
+internal fun DefaultDirectedGraph<Node, Edge>.toProdRules(
+    startSymbol: NonTerminal,
+    ntMap: MutableMap<String, NonTerminal>,
+): ProdRules {
     val prodrules = mutableMapOf<String, MutableMap<String?, MutableList<RuleEdge>>>()
     // shortest paths from the root
     val shortestPathToRoot = BellmanFordShortestPath(this).getPaths(getNodeFor(startSymbol))
@@ -299,28 +307,27 @@ internal fun DefaultDirectedGraph<Node, Edge>.toProdRules(startSymbol: NonTermin
             succ.nodes?.forEach { it_sn ->
                 when (it_sn) {
                     is NonTerminal -> {
+                        val abstractness =
+                            // Nodes that are closer to the root are more abstract
+                            -vertexSet().filter {
+                                // get all nodes that use the non-terminal
+                                it.nodes?.any { sym ->
+                                    sym.value == it_sn.value
+                                } == true
+                            }.map {
+                                // calculate average distance of those nodes to the root node
+                                // only count simple nodes. Last node might be simple OR complex, therefore we omit it from the calculation
+                                shortestPathToRoot.getPath(it).vertexList.dropLast(1)
+                                    .filterIsInstance<SimpleNode>().size
+                            }.toIntArray().average().toFloat()
 
-                        val _nt = NonTerminal(
-                                it_sn.value,
-                                // Nodes that are closer to the root are more abstract
-                                -vertexSet().filter {
-                                    // get all nodes that use the non-terminal
-                                    it.nodes?.any { sym ->
-                                        sym.value == it_sn.value
-                                    } == true
-                                }.map {
-                                    // calculate average distance of those nodes to the root node
-                                    // only count simple nodes. Last node might be simple OR complex, therefore we omit it from the calculation
-                                    shortestPathToRoot.getPath(it).vertexList.dropLast(1)
-                                        .filterIsInstance<SimpleNode>().size
-                                }.toIntArray().average().toFloat()
-                            )
-                        substitution.add(_nt)
-                        ntMap[it_sn.value] = _nt
+                        ntMap[it_sn.value]?.let {
+                            it.abstractness = abstractness
+                            substitution.add(it)
+                        } ?: error("NT must exist already")
                     }
 
                     is Terminal -> substitution.add(Terminal(it_sn.value))
-                    else -> {}
                 }
             }
 
