@@ -1,0 +1,33 @@
+gen:
+  - 'genExpr'
+genExpr[j<2]:
+  - '[j+=1] zero genExpr genIdent'
+genExpr:
+  - 'genIdent'
+
+# generateIdentNode
+genIdent[_k==0]:
+  - '[_k+=1] one'
+genIdent[_k==1]:
+  - '[_k+=1] two'
+  - 'three'
+genIdent[1 < _k < 100]:
+  - '[_k+=1] four'
+  - 'five'
+genIdent[_k==100]:
+  - 'six'
+
+zero:
+  - '"\x00\x00\x00\x00"'
+one:
+  - '"\x01\x00\x00\x00"'
+two:
+  - '"\x02\x00\x00\x00"'
+three:
+  - '"\x03\x00\x00\x00"'
+four:
+  - '"\x04\x00\x00\x00"'
+five:
+  - '"\x05\x00\x00\x00"'
+six:
+  - '"\x06\x00\x00\x00"'

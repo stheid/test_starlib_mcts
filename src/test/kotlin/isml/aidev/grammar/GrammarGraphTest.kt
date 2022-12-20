@@ -11,10 +11,10 @@ class GrammarGraphTest {
         println(node1.toString())
     }
 
-    @Test
-    fun toGraphTest() {
-        val grammar = Grammar.fromResource("extremely_simple_gram.yml", false)
-        val graph = grammar.prodRules.toGraph()
-        assert(graph.vertexSet().toList().size == 10)
-    }
+//    @Test
+//    fun toGraphTest() {
+//        val grammar = Grammar.fromResource("extremely_simple_gram.yml", false)
+//        val graph = grammar.prodRules.toGraph()
+//        assert(graph.vertexSet().toList().size == 10)
+//    }
 }
