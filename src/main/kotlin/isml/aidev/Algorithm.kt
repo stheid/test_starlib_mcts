@@ -54,6 +54,8 @@ class Algorithm(
         }
         uct.withMaxIterations(maxIterations)
         val mcts = factory.withMCTSFactory(uct).withProblem(problem).algorithm
+        //
+        mcts.loggerName="mcts"
 
         if (!headless) {
             val window = AlgorithmVisualizationWindow(mcts)
