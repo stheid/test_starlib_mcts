@@ -10,7 +10,7 @@ class SymbolsNode(
     val currNT: Symbol.NonTerminal?,
     val substitutionNTs: List<Symbol.NonTerminal> = emptyList(),
     private val parent: SymbolsNode? = null,
-    private val globalvars: Map<String, Int> = mapOf(),
+    private val globalvars: Map<String, Int>? = null,
     private val localvars: Map<Symbol.NonTerminal, Map<String, Int>> = mapOf(),
     val depth: Int = 0,
 ) {
@@ -22,13 +22,13 @@ class SymbolsNode(
         // get the parents nts or create an empty set
         (parent?.remainingNTs?.toMutableSet() ?: mutableSetOf())
             .apply {
-                addAll(substitutionNTs)
+                addAll(substitutionNTs.reversed())
                 remove(currNT)
             }
     }
 
     fun vars(nt: Symbol.NonTerminal): Map<String, Int> =
-        globalvars + (localvars.get(nt) ?: mapOf())
+        (globalvars?: mapOf()) + (localvars.get(nt) ?: mapOf())
 
     override fun toString() =
         "SymbolNode(currNT=${currNT}, depth=${depth})"
@@ -39,15 +39,7 @@ class SymbolsNode(
         }
 
         val newNts = rule.substitution.filterIsInstance<Symbol.NonTerminal>().map { it.copy() }.toList()
-
-        // Heuristic: resolve most abstract non-terminals first
-        val nextNT = (remainingNTs.toList() + newNts)
-            .run {
-                filter {
-                    it == maxBy(Symbol.NonTerminal::abstractness)
-                }
-            }.randomOrNull()
-
+        val nextNT = (remainingNTs.toList() + newNts.reversed()).lastOrNull()
         // in case newVars is null because there was no expression executed, we reuse the old local and global vars
         val newLocalvars = newVars?.filterKeys { !it.startsWith("_") } ?: localvars[currNT]
         val updatedGlobalVars = newVars?.filterKeys { it.startsWith("_") } ?: globalvars

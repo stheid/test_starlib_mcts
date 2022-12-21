@@ -3,7 +3,7 @@ gen:
 
 # generateStatement
 # true is || with stmtDepth>=maxStmtDepth
-genStmt[i<6]:
+genStmt[i<5]:
   - '[i+=1] true zero genExpr'
   - '[i+=1] true one' # break
   - '[i+=1] true two' # continue
@@ -30,11 +30,11 @@ genStmt:
 
 # generateExpression
 # true is || with exprDepth>=maxExprDepth
-genExpr[j<10]:
-  '[j+=1] true zero genLit': 2
-  '[j+=1] true one genIdent': 2
-  '[j+=1] false zero genBinary_int genExpr genExpr': 2 # binary
-  '[j+=1] false one genUnary_int genExpr': 2 # unary
+genExpr[j<9]:
+  'true zero genLit': 2
+  'true one genIdent': 2
+  '[j+=1] false zero genInt genExpr genExpr': 2 # binary
+  '[j+=1] false one genInt genExpr': 2 # unary
   '[j+=1] false two genExpr genExpr genExpr': 2 # ternary
   '[j+=1] false three genExpr mean3Expr bool': 2 # call
   '[j+=1] false four genFunc': 2
@@ -51,12 +51,17 @@ genReturn:
   - 'true'
   - 'false genExpr'
 
-genIdent[_k<100]:
-  - '[_k+=1] true genIdent_int26'
-  - 'false genIdent_int100'
-
-genIdent[_k==100]:
-  - 'genIdent_int100'
+# generateIdentNode
+genIdent[_k==0]:
+  - '[_k+=1] genInt'
+genIdent[_k==1]:
+  - '[_k+=1] true genInt'
+  - 'false'
+genIdent[1 < _k < 100]:
+  - '[_k+=1] true genInt'
+  - 'false genInt'
+genIdent:
+  - 'genInt'
 
 genIf:
   - 'genExpr genBlock true genBlock'
@@ -81,7 +86,6 @@ genFunc:
 #    for i in range(1, mean*2+1):
 #        print(f'\'_{i}geo{mean} {" ".join(repeat(nts,i+offset))}\': {geom(1/mean).pmf(i):.4f}')
 # gen('genIdent',5)
-
 mean5genIdent:
   '_1geo5 genIdent': 0.2000
   '_2geo5 genIdent genIdent': 0.1600
@@ -112,16 +116,42 @@ genCases:
   '_3geo2 genExpr genBlock genExpr genBlock genExpr genBlock': 0.1250
   '_4geo2 genExpr genBlock genExpr genBlock genExpr genBlock genExpr genBlock': 0.0625
 
-genLit[j<10]:
-  'true true mean3Expr': 1
-  'true false mean3Object': 1
-  'false nonNestingLit': 2
+mean3Expr:
+  '_1geo3 genExpr': 0.3333
+  '_2geo3 genExpr genExpr': 0.2222
+  '_3geo3 genExpr genExpr genExpr': 0.1481
+  '_4geo3 genExpr genExpr genExpr genExpr': 0.0988
+  '_5geo3 genExpr genExpr genExpr genExpr genExpr': 0.0658
+  '_6geo3 genExpr genExpr genExpr genExpr genExpr genExpr': 0.0439
 
-genLit[j==10]:
+mean3Ident:
+  '_1geo3 genIdent': 0.3333
+  '_2geo3 genIdent genIdent': 0.2222
+  '_3geo3 genIdent genIdent genIdent': 0.1481
+  '_4geo3 genIdent genIdent genIdent genIdent': 0.0988
+  '_5geo3 genIdent genIdent genIdent genIdent genIdent': 0.0658
+  '_6geo3 genIdent genIdent genIdent genIdent genIdent genIdent': 0.0439
+
+mean3Object:
+  '_1geo3 genIdent genExpr': 0.3333
+  '_2geo3 genIdent genExpr genIdent genExpr': 0.2222
+  '_3geo3 genIdent genExpr genIdent genExpr genIdent genExpr': 0.1481
+  '_4geo3 genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr': 0.0988
+  '_5geo3 genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr': 0.0658
+  '_6geo3 genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr': 0.0439
+
+
+# generateLiteralNode
+genLit[j<9]:
+  - '[j+=1] true true mean3Expr'
+  - '[j+=1] true false mean3Object'
+  - 'false nonNestingLit'
+
+genLit:
   - 'nonNestingLit'
 
 nonNestingLit:
-  - 'zero getLit_int'
+  - 'zero genInt'
   - 'one bool'
   - 'two asciiStr'
   - 'three'
@@ -151,30 +181,6 @@ asciiStr:
   '_19geo10 byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte': 0.0150
   '_20geo10 byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte byte': 0.0135
 
-
-mean3Expr:
-  '_1geo3 genExpr': 0.3333
-  '_2geo3 genExpr genExpr': 0.2222
-  '_3geo3 genExpr genExpr genExpr': 0.1481
-  '_4geo3 genExpr genExpr genExpr genExpr': 0.0988
-  '_5geo3 genExpr genExpr genExpr genExpr genExpr': 0.0658
-  '_6geo3 genExpr genExpr genExpr genExpr genExpr genExpr': 0.0439
-
-mean3Ident:
-  '_1geo3 genIdent': 0.3333
-  '_2geo3 genIdent genIdent': 0.2222
-  '_3geo3 genIdent genIdent genIdent': 0.1481
-  '_4geo3 genIdent genIdent genIdent genIdent': 0.0988
-  '_5geo3 genIdent genIdent genIdent genIdent genIdent': 0.0658
-  '_6geo3 genIdent genIdent genIdent genIdent genIdent genIdent': 0.0439
-
-mean3Object:
-  '_1geo3 genIdent genExpr': 0.3333
-  '_2geo3 genIdent genExpr genIdent genExpr': 0.2222
-  '_3geo3 genIdent genExpr genIdent genExpr genIdent genExpr': 0.1481
-  '_4geo3 genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr': 0.0988
-  '_5geo3 genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr': 0.0658
-  '_6geo3 genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr genIdent genExpr': 0.0439
 
 _1geo2:
   - '"\x04\xa7\x37\xbd\x6f\x91\x43\x87"'
@@ -235,6 +241,7 @@ _9geo5:
   - '"\xe6\xaa\x5c\xfb\x23\x66\x06\x24"'
 _10geo5:
   - '"\x3f\x59\x79\x9b\xb9\x26\xff\x8e"'
+
 _1geo10:
   - '"\x95\x50\x38\x7c\xb0\x57\x3b\xff"'
 _2geo10:
@@ -289,47 +296,24 @@ false:
 byte:
   - '"\x00" . "\x7F"'
 
-genBinary_int:
-  - '"\x00\x00\x00" int36'
-int36:
-  - '"\x00" . "\x24"'
-
-genUnary_int:
-  - '"\x00\x00\x00" int8'
-int8:
-  - '"\x00" . "\x07"'
-
-genIdent_int26:
-  - '"\x00\x00\x00" int26'
-int26:
-  - '"\x00" . "\x1a"'
-
-genIdent_int100:
-  - '"\x00\x00\x00" int100'
-int100:
-  - '"\x00" . "\x64"'
-
-getLit_int:
-  #  - '"\x00\x00\x00\x00" . "\x00\x00\x03\xe8"'
-  - '"\x00\x00\x00" int255'
-int255:
-  - '"\x00" . "\xff"'
-#int:
-#  - 'digit digit digit digit'
+genInt:
+  - 'int "\x00\x00\x00"'
+int:
+  - '"\x00" . "\x63"'
 
 zero:
   - '"\x00\x00\x00\x00"'
 one:
-  - '"\x00\x00\x00\x01"'
+  - '"\x01\x00\x00\x00"'
 two:
-  - '"\x00\x00\x00\x02"'
+  - '"\x02\x00\x00\x00"'
 three:
-  - '"\x00\x00\x00\x03"'
+  - '"\x03\x00\x00\x00"'
 four:
-  - '"\x00\x00\x00\x04"'
+  - '"\x04\x00\x00\x00"'
 five:
-  - '"\x00\x00\x00\x05"'
+  - '"\x05\x00\x00\x00"'
 six:
-  - '"\x00\x00\x00\x06"'
+  - '"\x06\x00\x00\x00"'
 seven:
-  - '"\x00\x00\x00\x07"'
+  - '"\x07\x00\x00\x00"'
