@@ -4,6 +4,12 @@ import isml.aidev.RuleEdge
 import isml.aidev.SymbolsNode
 import isml.aidev.grammar.Symbol
 import org.api4.java.datastructure.graph.ILabeledPath
+import org.jgrapht.Graphs
+import org.jgrapht.graph.DefaultDirectedGraph
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.nio.dot.DOTExporter
+import java.io.File
+import kotlin.random.Random
 
 fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
     val node = this.root
@@ -45,4 +51,31 @@ fun ILabeledPath<SymbolsNode, RuleEdge>.toWord(): String {
     }
 
     return symbols.filterIsInstance(Symbol.Terminal::class.java).joinToString(separator = "") { it.value }
+}
+
+fun ILabeledPath<SymbolsNode, RuleEdge>.exportParseTree(file: File) {
+    val graph = DefaultDirectedGraph<String, DefaultEdge>(DefaultEdge::class.java)
+    val idxedNode = mutableMapOf<String, String>()
+    var i = 0
+    arcs.zip(nodes.zipWithNext()).forEachIndexed { idx, (rule, nodepair) ->
+        val from_ =
+            idxedNode.getOrPut(
+                nodepair.first.currNT?.toUniqueString() ?: "null"
+            ) { "${i++} ${(nodepair.first.currNT?.toUniqueString() ?: "null")} $idx" }
+        nodepair.second.substitutionNTs.iterator().let { iterator ->
+            rule.substitution.map {
+                // if it's a non-terminal, take the equivalent Unique<NonTerminal> from the node
+                it as? Symbol.Terminal ?: iterator.next()
+            }
+        }.forEach {
+            val to_ = when (it) {
+                is Symbol.NonTerminal -> idxedNode.getOrPut(it.toUniqueString()) { "${i++} ${it.toUniqueString()} $idx" }
+                else -> "$it ${Random.nextInt(0, 999)}"
+            }
+
+            Graphs.addEdgeWithVertices(graph, from_, to_)
+        }
+    }
+
+    DOTExporter<String, DefaultEdge> { """"${it.filter { it.isLetterOrDigit() || it == ' ' }}""""  }.exportGraph(graph, file)
 }

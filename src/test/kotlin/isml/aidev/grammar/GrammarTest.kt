@@ -1,6 +1,9 @@
 package isml.aidev.grammar
 
+import isml.aidev.util.exportParseTree
+import isml.aidev.util.toWord
 import org.junit.jupiter.api.Test
+import java.io.File
 
 class GrammarTest {
     @Test
@@ -31,8 +34,9 @@ class GrammarTest {
     @Test
     fun sampleSimpleGram() {
         val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("abc.yaml")?.path!!)
-        val byteseq = grammar.sample()
-        println(byteseq)
+        val result = grammar.sample()
+        result.exportParseTree(File("parsetree.dot"))
+        println(result.toWord())
     }
 
     @Test
@@ -51,17 +55,8 @@ class GrammarTest {
     fun sampleAnotatedLocalGram() {
         val grammar =
             Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_localvar.yaml")?.path!!)
-        assert(grammar.sample() == "133355555")
-        for (i in 1..100){
-            println(grammar.sample())
-        }
-    }
-
-    @Test
-    fun sampleEquationGram() {
-        val grammar =
-            Grammar.fromFile(this::class.java.classLoader.getResource("equation_gram.yaml")?.path!!)
-        for (i in 1..10){
+        assert(grammar.sample().toWord() == "133355555")
+        for (i in 1..100) {
             println(grammar.sample())
         }
     }
@@ -70,10 +65,10 @@ class GrammarTest {
     fun sampleAnotatedGlobalGram() {
         val grammar =
             Grammar.fromFile(this::class.java.classLoader.getResource("simple_annotated_globvar.yaml")?.path!!)
-        val result = grammar.sample()
+        val result = grammar.sample().toWord()
         println(result)
         assert(result.length == 5)
-        for (i in 1..100){
+        for (i in 1..100) {
             println(grammar.sample())
         }
 
@@ -83,7 +78,7 @@ class GrammarTest {
     @Test
     fun sampleXmlAnnotGram() {
         val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("xml_gen_annot.yaml")?.path!!)
-        for (i in 1..500){
+        for (i in 1..500) {
             val byteseq = grammar.sample()
             println(byteseq)
 //            File("annotated/$i.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
@@ -92,11 +87,13 @@ class GrammarTest {
 
     @Test
     fun sampleJsAnnotatedGram() {
+        val fname = "/home/ajrox/Programs/aidev_zest_bench/src/main/resources/js_gen_inputs/"
         val grammar = Grammar.fromFile(this::class.java.classLoader.getResource("js_gen.yml")?.path!!)
-        for (i in 1..100){
-            val byteseq = grammar.sample()
-            println(byteseq)
-//            File("annotated/$i.bin").writeBytes(byteseq.map { it.code.toByte() }.toByteArray())
+        for (i in 1..50) {
+            val result = grammar.sample()
+//            result.exportParseTree(File("$fname/parsetree_${i}.dot"))
+//            println(result.toWord())
+            File("$fname/$i.bin").writeBytes(result.toWord().map { it.code.toByte() }.toByteArray())
         }
-    }
+   }
 }
