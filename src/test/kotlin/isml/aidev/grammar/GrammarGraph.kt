@@ -48,7 +48,7 @@ fun createExporter(): DOTExporter<Node, Edge> {
 }
 
 fun main() {
-    val grammar = Grammar.fromResource("simple_annotated_globvar.yaml", false)
+    val grammar = Grammar.fromResource("simple_annot_expectation_1.yml", false)
     //val grammar = Grammar.fromResource("simplify_4.yaml", false)
 //    val grammar = Grammar.fromResource("simple_annotated_grammargraph.yaml", false)
 //  val grammar = Grammar.fromResource("extremely_simple_gram.yml")
