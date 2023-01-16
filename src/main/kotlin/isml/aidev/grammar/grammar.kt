@@ -24,7 +24,7 @@ sealed class Symbol(open val value: String) {
     class NonTerminal(override val value: String, var abstractness: Float = 0.0f, var nExpectedSymbols: Float = 0.0f) :
         Symbol(value) {
         override fun toString() = "nt: $value (${"abs:%.2f".format(abstractness)}, ${"ExptdSymb:%.2f".format(nExpectedSymbols)})"
-
+        fun toUniqueString() = "nt: $value ${hashCode().toString().substring(0..3)}"
         fun copy() = NonTerminal(value)
     }
 
@@ -33,24 +33,34 @@ sealed class Symbol(open val value: String) {
 
 typealias ProdRules = Map<String, Map<String?, List<RuleEdge>>>
 
-data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules) {
+data class Grammar(val startSymbol: NonTerminal, val prodRules: ProdRules, val ntMap: MutableMap<String, NonTerminal>) {
     companion object {
         fun fromFile(path: String, doSimplify: Boolean = true): Grammar {
             val root = Yaml.default.parseToYamlNode(File(path).bufferedReader().readText())
-            val grammar = root.yamlMap.entries.entries.map { (leftProduction, rightProduction) ->
+            val startSymbol: NonTerminal
+            val ntMap: MutableMap<String, NonTerminal> = mutableMapOf()
+
+            val prodrules = root.yamlMap.entries.entries.map { (leftProduction, rightProduction) ->
                 val (NT, cond) = leftProduction.content.splitNtAndCond()
                 // the default condition is "true"
                 // (true literal in eval does not work in eval, we need to use another true expression instead)
                 Triple(NT, cond, rightProduction.parseRule()
                     // we need to flatmap because there are range like rules (byte-> \x00 .. \xff) that will be expanded into multiple rules
                     .flatMap { (substitution, weight) ->
-                        substitution.toRuleEdges(weight)
+                        val ruleEdges = substitution.toRuleEdges(weight, ntMap)
+                        ruleEdges
                     })
             }.groupBy { (NT, _, _) -> NT }.entries.associate { (NT, group) ->
                 NT to group.associate { (_, cond, rules) -> cond to rules }
-            }.run { if (doSimplify) simplify() else this }
+            }.run {
+                ntMap.getOrPut(keys.first()){NonTerminal(keys.first())}
+                startSymbol = ntMap[keys.first()]!!
+                // this will be able to simplify the graph
+                // and add calculate the distance between non-terminals and leafs
+                processAsGraph(doSimplify, startSymbol, ntMap)
+            }
 
-            return Grammar(NonTerminal(grammar.entries.first().key), grammar)
+            return Grammar(startSymbol, prodrules, ntMap)
         }
 
         fun fromResource(path: String, doSimplify: Boolean = true): Grammar {
@@ -113,7 +123,7 @@ private fun List<String>.tryExpand(): List<Terminal>? {
     } else null
 }
 
-private fun String.toRuleEdges(weight: Float): List<RuleEdge> {
+private fun String.toRuleEdges(weight: Float, ntMap: MutableMap<String, NonTerminal>): List<RuleEdge> {
     // quoted strings can have whitespaces (print), the nonterminals must only be composed by printable non-whitespace chars (graph)
     val (rawSymbols, statement) = splitSymbolsAndStmt()
 
@@ -126,10 +136,12 @@ private fun String.toRuleEdges(weight: Float): List<RuleEdge> {
                 // neutral statement without sideffects is pass
                 if (symbol.isQuoted())
                     Terminal(symbol.unQuote())
-                else
-                    NonTerminal(symbol)
+                else{
+                    val nt = NonTerminal(symbol)
+                    ntMap.getOrPut(symbol){ nt }
+                    nt
+                }
             }
-
             RuleEdge(symbols, statement, weight)
         })
     }
