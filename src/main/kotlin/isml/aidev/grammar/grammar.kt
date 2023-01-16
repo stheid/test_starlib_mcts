@@ -136,11 +136,8 @@ private fun String.toRuleEdges(weight: Float, ntMap: MutableMap<String, NonTermi
                 // neutral statement without sideffects is pass
                 if (symbol.isQuoted())
                     Terminal(symbol.unQuote())
-                else{
-                    val nt = NonTerminal(symbol)
-                    ntMap.getOrPut(symbol){ nt }
-                    nt
-                }
+                else
+                    ntMap.getOrPut(symbol){ NonTerminal(symbol) }
             }
             RuleEdge(symbols, statement, weight)
         })
