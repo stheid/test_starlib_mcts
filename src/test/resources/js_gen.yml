@@ -4,13 +4,13 @@ gen:
 # generateStatement
 # true is || with stmtDepth>=maxStmtDepth
 genStmt[i<6]:
-  - 'true zero genExpr'
-  - 'true one' # break
-  - 'true two' # continue
-  - 'true three genReturn'
-  - 'true four genExpr' # throw
-  - 'true five genIdent' # var
-  - 'true six' # empty
+  - '[i+=1] true zero genExpr'
+  - '[i+=1] true one' # break
+  - '[i+=1] true two' # continue
+  - '[i+=1] true three genReturn'
+  - '[i+=1] true four genExpr' # throw
+  - '[i+=1] true five genIdent' # var
+  - '[i+=1] true six' # empty
   - '[i+=1] false zero genIf'
   - '[i+=1] false one genFor'
   - '[i+=1] false two genExpr genBlock' # while
@@ -31,10 +31,10 @@ genStmt:
 # generateExpression
 # true is || with exprDepth>=maxExprDepth
 genExpr[j<10]:
-  'true zero genLit': 8
-  'true one genIdent': 8
-  '[j+=1] false zero int genExpr genExpr': 2 # binary
-  '[j+=1] false one int genExpr': 2 # unary
+  '[j+=1] true zero genLit': 2
+  '[j+=1] true one genIdent': 2
+  '[j+=1] false zero genBinary_int genExpr genExpr': 2 # binary
+  '[j+=1] false one genUnary_int genExpr': 2 # unary
   '[j+=1] false two genExpr genExpr genExpr': 2 # ternary
   '[j+=1] false three genExpr mean3Expr bool': 2 # call
   '[j+=1] false four genFunc': 2
@@ -52,11 +52,11 @@ genReturn:
   - 'false genExpr'
 
 genIdent[_k<100]:
-  - '[_k+=1] true int'
-  - 'false int'
+  - '[_k+=1] true genIdent_int26'
+  - 'false genIdent_int100'
 
 genIdent[_k==100]:
-  - 'int'
+  - 'genIdent_int100'
 
 genIf:
   - 'genExpr genBlock true genBlock'
@@ -72,13 +72,17 @@ genForExpr:
 genNameFunc:
   - 'genIdent genFunc'
 
+genFunc:
+  - 'mean5genIdent genBlock'
+
 # from scipy.stats import geom
 # from itertools import repeat
 # def gen(nts, mean=10, offset=0):
 #    for i in range(1, mean*2+1):
 #        print(f'\'_{i}geo{mean} {" ".join(repeat(nts,i+offset))}\': {geom(1/mean).pmf(i):.4f}')
 # gen('genIdent',5)
-genFunc:
+
+mean5genIdent:
   '_1geo5 genIdent': 0.2000
   '_2geo5 genIdent genIdent': 0.1600
   '_3geo5 genIdent genIdent genIdent': 0.1280
@@ -117,7 +121,7 @@ genLit[j==10]:
   - 'nonNestingLit'
 
 nonNestingLit:
-  - 'zero int'
+  - 'zero getLit_int'
   - 'one bool'
   - 'two asciiStr'
   - 'three'
@@ -283,13 +287,35 @@ false:
   - '"\x00"'
 
 byte:
-    - '"\x00" . "\xFF"'
+  - '"\x00" . "\x7F"'
 
-digit:
-  - '"\x00" . "\x09"'
+genBinary_int:
+  - '"\x00\x00\x00" int36'
+int36:
+  - '"\x00" . "\x24"'
 
-int:
-  - 'digit digit digit digit'
+genUnary_int:
+  - '"\x00\x00\x00" int8'
+int8:
+  - '"\x00" . "\x07"'
+
+genIdent_int26:
+  - '"\x00\x00\x00" int26'
+int26:
+  - '"\x00" . "\x1a"'
+
+genIdent_int100:
+  - '"\x00\x00\x00" int100'
+int100:
+  - '"\x00" . "\x64"'
+
+getLit_int:
+  #  - '"\x00\x00\x00\x00" . "\x00\x00\x03\xe8"'
+  - '"\x00\x00\x00" int255'
+int255:
+  - '"\x00" . "\xff"'
+#int:
+#  - 'digit digit digit digit'
 
 zero:
   - '"\x00\x00\x00\x00"'

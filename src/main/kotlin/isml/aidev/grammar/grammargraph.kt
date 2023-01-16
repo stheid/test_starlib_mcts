@@ -8,8 +8,10 @@ import org.jgrapht.Graphs
 import org.jgrapht.alg.shortestpath.BellmanFordShortestPath
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
+import kotlin.math.abs
 
-open class Node(open val nodes: Chain<Symbol>?)
+
+open class Node(open val nodes: Chain<Symbol>?, var expectedExpansions: Float = 0.0f)
 
 // ConditionalNode can contain non-terminals based on conditions in annotated grammar
 // Mustn't be a dataclass since there could be nts with the same condition
@@ -35,30 +37,37 @@ data class SimpleNode(override val nodes: Chain<Symbol>?) : Node(nodes) {
     }
 }
 
-class RuleEdgeSimplify(var statement: String?) : DefaultEdge()
-class ComplexEdge : DefaultEdge()
-class CondEdge : DefaultEdge()
+open class Edge(var expectedExpansions: Float = 1.0f) : DefaultEdge()
+class RuleEdgeSimplify(var statement: String?, var weight: Float = 0.0f) : Edge()
+class ComplexEdge : Edge()
+class CondEdge : Edge()
 
 
-fun ProdRules.processAsGraph(doSimplify: Boolean, startSymbol: NonTerminal): ProdRules =
-    this.toGraph().run { if (doSimplify) simplify() else this }.toProdRules(startSymbol)
+fun ProdRules.processAsGraph(
+    doSimplify: Boolean,
+    startSymbol: NonTerminal,
+    ntMap: MutableMap<String, NonTerminal>,
+): ProdRules =
+    this.toGraph(ntMap).run { if (doSimplify) simplify() else this }.normalizeWeights()
+        .calculateExpectation(startSymbol)
+        .toProdRules(startSymbol, ntMap)
 
-internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
+internal fun ProdRules.toGraph(ntMap: MutableMap<String, NonTerminal>): DefaultDirectedGraph<Node, Edge> {
     // Example JGraphT code https://jgrapht.org/guide/UserOverview
-    val graph = DefaultDirectedGraph<Node, DefaultEdge>(DefaultEdge::class.java)
+    val graph = DefaultDirectedGraph<Node, Edge>(Edge::class.java)
     val nodes = mutableMapOf<String, Node>()
     val complexNodes = mutableMapOf<String, Node>()
 
-    fun Node.addAsChildOf(parent: Node, EdgeType: DefaultEdge = DefaultEdge()): Node {
+    fun Node.addAsChildOf(parent: Node, EdgeType: Edge = Edge()): Node {
         graph.addVertex(this)
         graph.addEdge(parent, this, EdgeType)
         return this
     }
 
     // add all nodes as vertices to graph,
-    // add edges among keys and values in production rules.
-    this.forEach { (nt_key, cond_ruleEdges) ->
-        val nt = NonTerminal(nt_key)
+    // add edges between keys and values in production rules.
+    forEach { (nt_key, cond_ruleEdges) ->
+        val nt = ntMap[nt_key]!!
         val keyNode = nodes.getOrPut(nt.value) {
             SimpleNode(Chain(listOf(nt))).apply {
                 graph.addVertex(this)
@@ -77,21 +86,22 @@ internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
             ruleEdges.forEach {
                 val value = it.substitution
                 val stmt = it.expression
+                val weight = it.weight
                 when (value.size) {
                     0 -> {
                         SimpleNode(null)
-                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt))
+                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt, weight))
                     }
 
                     1 -> {
                         val ntVal = value.single().value
                         nodes.getOrPut(ntVal) { SimpleNode(Chain(value)) }
-                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt))
+                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt, weight))
                     }
 
                     else -> {
                         complexNodes.getOrPut(value.joinToString { it.value }) { ComplexNode(Chain(value)) }
-                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt))
+                            .addAsChildOf(anchor, RuleEdgeSimplify(stmt, weight))
                     }
                 }
             }
@@ -106,16 +116,10 @@ internal fun ProdRules.toGraph(): DefaultDirectedGraph<Node, DefaultEdge> {
     return graph
 }
 
+private fun <V, E> DefaultDirectedGraph<V, E>.preds(vert: V) = Graphs.predecessorListOf(this, vert)!!
+private fun <V, E> DefaultDirectedGraph<V, E>.succs(vert: V) = Graphs.successorListOf(this, vert)!!
 
-private fun <V, E> DefaultDirectedGraph<V, E>.preds(vert: V): MutableList<V> {
-    return Graphs.predecessorListOf(this, vert)!!
-}
-
-private fun <V, E> DefaultDirectedGraph<V, E>.succs(vert: V): MutableList<V> {
-    return Graphs.successorListOf(this, vert)!!
-}
-
-internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirectedGraph<Node, DefaultEdge> {
+internal fun DefaultDirectedGraph<Node, Edge>.simplify(): DefaultDirectedGraph<Node, Edge> {
     val nodesToProcess = vertexSet().toMutableList()
 
     while (nodesToProcess.isNotEmpty()) {
@@ -137,7 +141,7 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
                                     listOfNotNull(
                                         firstEdge.statement,
                                         secondEdge.statement
-                                    ).joinToString(";")
+                                    ).run { ifEmpty { null } }?.joinToString(";"), firstEdge.weight
                                 )
                             )
                             removeVertex(node)
@@ -159,8 +163,7 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
                             // remove this succ and update ComplexNode
                             val oldNT = node.nodes?.single() // The Non-terminal
                             // find the chain link in "pred" containing this non-terminal
-                            val link = pred.nodes!!.linkIterator().asSequence()
-                                .single { it.value.toString() == oldNT.toString() }
+                            val link = pred.nodes!!.linkIterator().asSequence().single { it.value.symbolEqual(oldNT) }
                             // replace the non-terminal with all terminals from "succ" and remove the "succ"
                             pred.nodes!!.replace(link, succ.nodes)
                             removeVertex(succ)
@@ -181,9 +184,13 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
                                 addVertex(newNode)
                                 // eliminate "pred" by letting its predecessors point to "newNode"
                                 preds(pred).forEach {
+                                    val oldEdge = getEdge(it, pred) as RuleEdgeSimplify
                                     addEdge(
                                         it, newNode,
-                                        RuleEdgeSimplify((getEdge(it, pred) as RuleEdgeSimplify).statement)
+                                        RuleEdgeSimplify(
+                                            (getEdge(it, pred) as RuleEdgeSimplify).statement,
+                                            oldEdge.weight
+                                        )
                                     )
                                 }
                                 removeVertex(pred)
@@ -197,24 +204,110 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.simplify(): DefaultDirected
     return this
 }
 
+internal fun DefaultDirectedGraph<Node, Edge>.normalizeWeights(): DefaultDirectedGraph<Node, Edge> {
+// for all simple edges:
+    // get sibling edges
+    // normalize weights
+    // mark all siblings as processed
+    val unprocessed = edgeSet().filterIsInstance<RuleEdgeSimplify>().toMutableList()
+    while (unprocessed.isNotEmpty()) {
+        val currEdge = unprocessed.removeFirst()
+        val siblings = siblings(currEdge)
+        val totalWeight = siblings.map { (it as RuleEdgeSimplify).weight }.toFloatArray().sum()
+        siblings.forEach { (it as RuleEdgeSimplify).weight /= totalWeight }
+        unprocessed.removeAll(siblings)
+    }
+    return this
+}
 
-internal fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(startSymbol: NonTerminal): ProdRules {
+private fun <V, E> DefaultDirectedGraph<V, E>.siblings(edge: E): MutableSet<E> {
+    return outgoingEdgesOf(getEdgeSource(edge))
+}
+
+internal fun DefaultDirectedGraph<Node, Edge>.calculateExpectation(startSymbol: NonTerminal): DefaultDirectedGraph<Node, Edge> {
+
+    // set edge weights (complex edge: 1, conditional: 1/n, rule edge: weight)
+    val unprocessed = edgeSet().toMutableList()
+    while (unprocessed.isNotEmpty()) {
+        when (val currEdge = unprocessed.removeFirst()) {
+            is ComplexEdge -> currEdge.expectedExpansions = 1.0f
+            is CondEdge -> {
+                val siblings = siblings(currEdge)
+                siblings.forEach { it.expectedExpansions = 1.0f / siblings.size }
+                unprocessed.removeAll(siblings)
+            }
+
+            is RuleEdgeSimplify -> currEdge.expectedExpansions = currEdge.weight
+        }
+    }
+
+    // process nodes from bottom to top
+    val processingOrder = pseudoTopoOrder(this, startSymbol).reversed()
+    // calculate expectation values in the nodes iteratively
+    run outer@{
+        for (i in 1..20) {
+            var hasChanged = false
+            processingOrder.forEach {
+                val succs = succs(it)
+                val result = when (succs.size) {
+                    0 -> it.nodes?.asIterable()?.filterIsInstance<Terminal>()?.toList()?.size?.toFloat() ?: 0.0f
+                    else -> (it.nodes?.asIterable()?.filterIsInstance<Terminal>()?.toList()?.size?.toFloat() ?: 0.0f) +
+                            succs.map { succ -> getEdge(it, succ).expectedExpansions * succ.expectedExpansions }.sum()
+                }
+                hasChanged = hasChanged || (abs(it.expectedExpansions - result) > 0.01f)
+                it.expectedExpansions = result
+            }
+            if (!hasChanged) return@outer
+        }
+    }
+
+    // finally calculate expectation for the rule edges and assign it to the internal field
+    edgeSet().filterIsInstance<RuleEdgeSimplify>().forEach {
+        it.expectedExpansions = getEdgeTarget(it).expectedExpansions
+    }
+    return this
+}
+
+
+/**
+ * toProcess = {root}
+ * while toProcess:
+ *   curr = toProcess.pop()
+ *   graph.removeEdges(*, curr)
+ *   toProcess += succs(curr)
+ */
+internal fun pseudoTopoOrder(graph: DefaultDirectedGraph<Node, Edge>, startSymbol: NonTerminal): List<Node> {
+    @Suppress("UNCHECKED_CAST") val g = graph.clone() as DefaultDirectedGraph<Node, Edge>
+    val unprocessed = mutableSetOf(g.getNodeFor(startSymbol))
+    val topoOrder = mutableListOf<Node>()
+    while (unprocessed.isNotEmpty()) {
+        val currNode = unprocessed.minBy { g.inDegreeOf(it) }.also { unprocessed.remove(it) }
+        topoOrder.add(currNode)
+        // remove edges pointing towards the current node (back edges)
+        g.removeAllEdges(g.preds(currNode).map { g.getEdge(it, currNode) })
+        // otherwise succs might eventually point back to nodes that have been processed
+        unprocessed.addAll(g.succs(currNode))
+        g.removeVertex(currNode)
+    }
+    return topoOrder
+}
+
+
+internal fun DefaultDirectedGraph<Node, Edge>.toProdRules(
+    startSymbol: NonTerminal,
+    ntMap: MutableMap<String, NonTerminal>,
+): ProdRules {
     val prodrules = mutableMapOf<String, MutableMap<String?, MutableList<RuleEdge>>>()
     // shortest paths from the root
-    val shortestPathToRoot =
-        BellmanFordShortestPath(this).getPaths(vertexSet().single {
-            it.nodes?.singleOrNull()?.run { value == startSymbol.value } ?: false
-        })
-
-    fun createRules(nt: String, parent: Node, successors: MutableList<Node>, cond: String? = null) {
-        successors.forEach { succ ->
+    val shortestPathToRoot = BellmanFordShortestPath(this).getPaths(getNodeFor(startSymbol))
+    fun createRules(nt: String, parent: Node, successors: List<Node>, cond: String? = null) {
+        successors.map { it to getEdge(parent, it) as RuleEdgeSimplify }.forEach { (succ, edge) ->
             val substitution = mutableListOf<Symbol>()
 
             succ.nodes?.forEach { it_sn ->
                 when (it_sn) {
-                    is NonTerminal -> substitution.add(
-                        NonTerminal(
-                            it_sn.value,
+                    is NonTerminal -> {
+                        val abstractness =
                             // Nodes that are closer to the root are more abstract
                             -vertexSet().filter {
                                 // get all nodes that use the non-terminal
@@ -226,9 +319,13 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(startSymbol: No
                                 // only count simple nodes. Last node might be simple OR complex, therefore we omit it from the calculation
                                 shortestPathToRoot.getPath(it).vertexList.dropLast(1)
                                     .filterIsInstance<SimpleNode>().size
-                            }.toIntArray().average()
-                        )
-                    )
+                            }.toIntArray().average().toFloat()
+
+                        ntMap[it_sn.value]?.let {
+                            it.abstractness = abstractness
+                            substitution.add(it)
+                        } ?: error("NT must exist already")
+                    }
 
                     is Terminal -> substitution.add(Terminal(it_sn.value))
                 }
@@ -241,25 +338,38 @@ internal fun DefaultDirectedGraph<Node, DefaultEdge>.toProdRules(startSymbol: No
                 .getOrPut(cond) {
                     // in case the condition has not been added yet
                     mutableListOf()
-                }.add(RuleEdge(substitution, (getEdge(parent, succ) as? RuleEdgeSimplify)?.statement))
+                }.add(
+                    RuleEdge(
+                        substitution,
+                        edge.statement,
+                        edge.weight,
+                        edge.expectedExpansions
+                    )
+                )
         }
     }
 
     // iterate over all simple nodes and conditional nodes. Simple nodes with conditions are filtered,
     // such that every rule is only processed exactly once
-    this.vertexSet()
+    vertexSet()
         .filter { it !is ComplexNode }
         .forEach {
-            val succs = this.succs(it)
-            if (it !is ConditionalNode && !this.succs(it).any { it_ -> it_ is ConditionalNode }) {
+            val succs = succs(it)
+            if (it !is ConditionalNode && !succs(it).any { it_ -> it_ is ConditionalNode }) {
                 // SimpleNodes (with no condition): create rules from non-terminal to the rule substitutions
                 createRules(it.nodes?.first?.value?.value.toString(), it, succs)
             } else if (it is ConditionalNode) {
                 // ConditionalNodes: create rules from its non-terminal to the rule substitutions
-                val nt = this.preds(it).single().nodes?.first?.value?.value.toString()
+                val nt = preds(it).single().nodes?.first?.value?.value.toString()
                 createRules(nt, it, succs, it.cond)
             }
         }
 
     return prodrules
+}
+
+internal fun <E> DefaultDirectedGraph<Node, E>.getNodeFor(symbol: NonTerminal): Node {
+    return vertexSet().single {
+        it.nodes?.singleOrNull()?.run { value == symbol.value } ?: false
+    }
 }
